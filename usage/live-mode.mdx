@@ -1,0 +1,206 @@
+---
+title: Live Mode
+description: Apply temporary CPU optimizations in real-time with auto-cpufreq's live mode
+icon: circle-play
+---
+
+## What is Live Mode?
+
+Live mode actively monitors your system and automatically makes temporary CPU frequency optimizations in real-time. Unlike [monitor mode](/commands/monitor) which only shows suggestions, live mode actually applies the changes to your system.
+
+<Warning>
+  Changes made in live mode are **temporary** and will be lost after a system reboot. This mode is designed for testing and evaluation purposes.
+</Warning>
+
+## How Live Mode Differs from Monitor Mode
+
+<CardGroup cols={2}>
+  <Card title="Monitor Mode" icon="eye">
+    - Read-only observation
+    - Shows suggestions only
+    - No system changes
+    - Safe for evaluation
+  </Card>
+  <Card title="Live Mode" icon="circle-play">
+    - Active optimization
+    - Applies changes automatically
+    - Temporary changes (lost on reboot)
+    - Tests real-world behavior
+  </Card>
+</CardGroup>
+
+## Running Live Mode
+
+To start live mode, run the following command with sudo privileges:
+
+```bash
+sudo auto-cpufreq --live
+```
+
+<Info>
+  Live mode requires root privileges because it needs to modify CPU frequency scaling settings and governor configurations.
+</Info>
+
+## What Happens When You Run Live Mode?
+
+When you start live mode, auto-cpufreq:
+
+<Steps>
+  <Step title="Checks for Conflicts">
+    Detects conflicting services (GNOME Power Profiles, TLP) and temporarily stops them for the duration of the live session.
+  </Step>
+  <Step title="Starts Monitoring">
+    Begins monitoring CPU usage, temperature, system load, and battery state in real-time.
+  </Step>
+  <Step title="Applies Optimizations">
+    Automatically adjusts CPU governors, frequencies, and turbo boost based on current conditions.
+  </Step>
+  <Step title="Updates Display">
+    Shows live statistics and current settings in a terminal UI that refreshes every 2 seconds.
+  </Step>
+</Steps>
+
+## Live Mode Optimizations
+
+Live mode makes intelligent decisions based on multiple factors:
+
+### Battery State
+
+- **On Battery Power**: Uses `powersave` governor, reduces maximum frequency, manages turbo boost conservatively
+- **Plugged In**: Uses `performance` governor, allows higher frequencies, enables turbo boost when needed
+
+### CPU Load
+
+- **Low Load**: Reduces CPU frequencies to minimum to save power
+- **Medium Load**: Balances performance and efficiency
+- **High Load**: Increases frequencies and may enable turbo boost
+
+### Temperature Management
+
+- Monitors per-core temperatures
+- Reduces frequencies if thermal thresholds are exceeded
+- Prevents overheating by disabling turbo when cores are hot
+
+### System Load Average
+
+- Considers 1-minute, 5-minute, and 15-minute load averages
+- Adjusts scaling behavior based on sustained load patterns
+
+## Live Mode Interface
+
+The live mode interface displays the same information as monitor mode, but with real-time updates showing the changes being applied:
+
+```
+Live Mode - 15:45:32
+
+┌─ System Information ──────────┐  ┌─ Battery Stats ────────────────┐
+│ Linux distro: Arch Linux      │  │ Battery status: charging       │
+│ Linux kernel: 6.6.10          │  │ Battery percentage: 45%        │
+│ Processor: AMD Ryzen 7 5800H  │  │ AC plugged: Yes                │
+│ Cores: 16                     │  │                                │
+│ Architecture: x86_64          │  ├─ CPU Frequency Scaling ────────┤
+│ Driver: acpi-cpufreq          │  │ Setting to use: "performance"  │
+│                               │  │ Setting turbo boost: On        │
+└───────────────────────────────┘  │                                │
+                                    ├─ System Statistics ────────────┤
+┌─ Current CPU Stats ───────────┐  │ Total CPU usage: 67.8 %        │
+│ CPU max frequency: 4463 MHz   │  │ Total system load: 2.34        │
+│ CPU min frequency: 1400 MHz   │  │ Average temp: 68.50 °C         │
+│                               │  │ Load high                      │
+│ Core  Usage  Temp    Freq     │  │ High total CPU usage           │
+│ CPU0   72.3%  69°C  3800 MHz  │  └────────────────────────────────┘
+│ CPU1   65.8%  68°C  3600 MHz  │
+│ ...                           │
+└───────────────────────────────┘
+```
+
+## Navigating Live Mode
+
+The live mode terminal UI provides simple controls:
+
+- Press **Q** or **Ctrl+C** to exit live mode
+- Use **↑** and **↓** arrow keys to scroll through information
+- Use **PageUp** and **PageDown** for faster scrolling
+
+<Note>
+  When you exit live mode, all changes are reverted and any temporarily stopped services (like GNOME Power Profiles) are restarted.
+</Note>
+
+## Temporary Nature of Changes
+
+It's important to understand that live mode changes are not persistent:
+
+<Accordion title="What happens when you exit live mode?">
+  - All CPU frequency scaling settings are reset
+  - Temporarily stopped services are restarted
+  - System returns to its previous configuration
+  - No permanent changes are made to systemd services or boot configuration
+</Accordion>
+
+<Accordion title="What happens after a reboot?">
+  - All live mode optimizations are lost
+  - System boots with default CPU frequency scaling settings
+  - You would need to run live mode again to re-apply optimizations
+  - To maintain optimizations across reboots, install the daemon
+</Accordion>
+
+## Using Live Mode with Custom Config
+
+You can test custom configuration files in live mode:
+
+```bash
+sudo auto-cpufreq --live --config /path/to/custom.conf
+```
+
+This allows you to:
+- Test different governor settings
+- Experiment with turbo boost configurations
+- Try custom frequency limits
+- Evaluate EPP/EPB settings
+
+All without making permanent changes to your system.
+
+## When to Use Live Mode
+
+<CardGroup cols={2}>
+  <Card title="Testing Configuration" icon="flask">
+    Validate custom config files before installing the daemon permanently.
+  </Card>
+  <Card title="Evaluating Performance" icon="gauge-high">
+    See how auto-cpufreq affects your real-world workloads and battery life.
+  </Card>
+  <Card title="Troubleshooting" icon="wrench">
+    Debug issues with specific settings before making them permanent.
+  </Card>
+  <Card title="One-Time Optimization" icon="clock">
+    Apply optimizations for a single session without installing the daemon.
+  </Card>
+</CardGroup>
+
+## Compatibility Notes
+
+<Warning>
+  Live mode will temporarily disable conflicting services:
+  - **GNOME Power Profiles**: Stopped during live session, restarted on exit
+  - **TLP**: Will be detected and you'll be prompted before continuing
+  - **tuned**: Stopped during live session, restarted on exit
+</Warning>
+
+## Performance Impact
+
+Live mode has minimal performance overhead:
+- Updates occur every 2 seconds (configurable in source)
+- CPU monitoring uses standard Linux interfaces
+- No disk I/O for stats logging (unlike daemon mode)
+- Changes are applied efficiently using `cpufreqctl`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Install the Daemon" icon="download" href="/usage/daemon-mode">
+    Ready to make optimizations permanent? Install auto-cpufreq as a systemd service.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/config-file">
+    Learn how to create custom configuration files for specific optimization profiles.
+  </Card>
+</CardGroup>

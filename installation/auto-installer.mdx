@@ -1,0 +1,169 @@
+---
+title: Auto-Installer
+description: Install auto-cpufreq using the official auto-cpufreq-installer script
+---
+
+The auto-cpufreq-installer is the recommended installation method that works across most Linux distributions. It automatically detects your distribution and installs all necessary dependencies.
+
+<Note>
+  As auto-cpufreq relies on git-based versioning, users are advised to install using the `git clone` method only. Downloading source code as a zip or from releases will cause build errors.
+</Note>
+
+## Prerequisites
+
+Before installation, ensure you have:
+
+- Git installed on your system
+- Sudo/root access
+- Python 3.9 or higher
+- Internet connection for downloading dependencies
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the repository">
+    Use git to clone the auto-cpufreq repository:
+    ```bash
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    ```
+  </Step>
+
+  <Step title="Run the installer">
+    Navigate to the cloned directory and run the installer:
+    ```bash
+    cd auto-cpufreq && sudo ./auto-cpufreq-installer
+    ```
+  </Step>
+
+  <Step title="Select install option">
+    When prompted, press `I` to install or `R` to remove:
+    ```
+    Select a key [I]nstall/[R]emove or press ctrl+c to quit:
+    ```
+  </Step>
+
+  <Step title="Wait for installation to complete">
+    The installer will:
+    - Detect your Linux distribution
+    - Install required system dependencies
+    - Set up Python virtual environment
+    - Install auto-cpufreq and its Python dependencies
+    - Configure desktop integration (icon and GUI launcher)
+  </Step>
+</Steps>
+
+## Supported Distributions
+
+The auto-installer automatically detects and supports:
+
+<CardGroup cols={2}>
+  <Card title="Debian-based" icon="debian">
+    Ubuntu, Debian, Linux Mint, Pop!_OS, etc.
+  </Card>
+  <Card title="Red Hat-based" icon="redhat">
+    Fedora, CentOS, RHEL, etc.
+  </Card>
+  <Card title="Arch-based" icon="code">
+    Arch Linux, Manjaro, EndeavourOS, etc.
+  </Card>
+  <Card title="Other" icon="linux">
+    OpenSUSE, Void Linux, Solus, Gentoo (via GURU)
+  </Card>
+</CardGroup>
+
+## Post-Installation
+
+After successful installation:
+
+1. **Verify installation**: Run `auto-cpufreq --help` to see available options
+2. **Test the tool**: Run `sudo auto-cpufreq --monitor` to see what optimizations would be applied
+3. **Install the daemon**: Run `sudo auto-cpufreq --install` to enable permanent optimizations
+
+<Note>
+  The auto-cpufreq binary is installed at `/usr/local/bin/auto-cpufreq` and should be available in your PATH.
+</Note>
+
+## Installation Locations
+
+The installer creates files in the following locations:
+
+- **Binary**: `/usr/local/bin/auto-cpufreq`
+- **GUI Binary**: `/usr/local/bin/auto-cpufreq-gtk`
+- **Virtual Environment**: `/opt/auto-cpufreq/venv`
+- **Shared Files**: `/usr/local/share/auto-cpufreq/`
+- **Desktop Entry**: `/usr/share/applications/auto-cpufreq-gtk.desktop`
+- **Icon**: `/usr/share/pixmaps/auto-cpufreq.png`
+- **Polkit Policy**: `/usr/share/polkit-1/actions/org.auto-cpufreq.pkexec.policy`
+
+## Automatic Conflict Resolution
+
+The installer automatically handles conflicts with:
+
+- **GNOME Power Profiles Daemon**: Automatically disabled to prevent conflicts
+- **TuneD Daemon** (Fedora 41+): Automatically disabled to prevent conflicts
+
+<Warning>
+  After installing auto-cpufreq, it's recommended to remove TLP if installed, as both tools manage CPU frequencies and will conflict.
+</Warning>
+
+## Troubleshooting
+
+### Installation fails with dependency errors
+
+If you encounter dependency errors, ensure your system is up to date:
+
+```bash
+# Debian/Ubuntu
+sudo apt update && sudo apt upgrade
+
+# Fedora
+sudo dnf update
+
+# Arch
+sudo pacman -Syu
+```
+
+### Manual installation for unsupported distributions
+
+If your distribution is not automatically detected:
+
+1. Install required dependencies:
+   - python3, pip3, python3-setuptools
+   - gobject-introspection
+   - cairo (or cairo-devel)
+   - gcc
+   - gtk3
+
+2. Install Python packages:
+   ```bash
+   pip3 install psutil click distro power requests PyGObject
+   ```
+
+3. Run installation commands:
+   ```bash
+   pip3 install .
+   mkdir -p /usr/local/share/auto-cpufreq
+   cp -r scripts/ /usr/local/share/auto-cpufreq
+   ```
+
+### Uninstalling
+
+To completely remove auto-cpufreq:
+
+```bash
+cd auto-cpufreq
+sudo ./auto-cpufreq-installer --remove
+```
+
+Or run the installer and select the `R` option.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure auto-cpufreq" icon="gear" href="/configuration">
+    Learn how to customize auto-cpufreq settings
+  </Card>
+  <Card title="Enable the daemon" icon="server" href="/usage/daemon-mode">
+    Set up auto-cpufreq to run automatically
+  </Card>
+</CardGroup>

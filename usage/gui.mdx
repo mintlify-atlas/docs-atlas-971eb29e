@@ -1,0 +1,395 @@
+---
+title: GUI (Graphical Interface)
+description: Manage auto-cpufreq using the GTK-based graphical user interface
+icon: window
+---
+
+## GUI Overview
+
+Starting with version 2.0, auto-cpufreq includes a GTK-based graphical user interface (GUI) that provides an easy-to-use alternative to command-line management. The GUI offers visual access to all daemon management features, real-time statistics, and configuration options.
+
+<Info>
+  The GUI requires auto-cpufreq v2.0 or later and is only available when installed using the [auto-cpufreq-installer](/installation/auto-installer) or from source.
+</Info>
+
+<Warning>
+  **Snap users**: The GUI is not available for Snap package installations due to Snap confinement limitations. Use the CLI commands instead, or install via [auto-cpufreq-installer](/installation/auto-installer).
+</Warning>
+
+## Launching the GUI
+
+There are several ways to launch the auto-cpufreq GUI:
+
+### From Application Menu
+
+After installation, auto-cpufreq appears as a desktop application:
+
+1. Open your application launcher
+2. Search for "auto-cpufreq"
+3. Click the auto-cpufreq icon to launch
+
+<Note>
+  The desktop entry is located at `/usr/share/applications/auto-cpufreq-gtk.desktop` and includes a custom icon.
+</Note>
+
+### From Command Line
+
+Launch the GUI directly from a terminal:
+
+```bash
+auto-cpufreq-gtk
+```
+
+<Accordion title="GUI won't launch with exit code 1?">
+  If the GUI fails to launch, try this workaround:
+  
+  ```bash
+  env -i XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR auto-cpufreq-gtk
+  ```
+  
+  If this works, you can make it permanent by editing `/usr/share/applications/auto-cpufreq-gtk.desktop` and changing the `Exec=` line to use the env wrapper.
+</Accordion>
+
+### From Source (Development)
+
+If you installed with GUI support during development:
+
+```bash
+poetry install --extras gui
+poetry run auto-cpufreq-gtk
+```
+
+## GUI Features
+
+The auto-cpufreq GUI provides several key features:
+
+### Before Daemon Installation
+
+When the daemon is not yet installed, the GUI displays:
+
+<CardGroup cols={2}>
+  <Card title="Install Button" icon="download">
+    One-click installation of the auto-cpufreq daemon as a systemd service.
+  </Card>
+  <Card title="System Information" icon="info-circle">
+    Basic system details including distro, kernel, CPU model, and driver information.
+  </Card>
+</CardGroup>
+
+### After Daemon Installation
+
+Once the daemon is installed, the GUI provides full functionality:
+
+<Steps>
+  <Step title="Real-Time Statistics">
+    View live CPU metrics, battery status, and optimization decisions updated every few seconds.
+  </Step>
+  <Step title="Daemon Controls">
+    Start, stop, restart, or remove the daemon with graphical buttons.
+  </Step>
+  <Step title="Governor Information">
+    See current CPU governor, turbo boost status, and EPP/EPB settings.
+  </Step>
+  <Step title="Per-Core Metrics">
+    Monitor frequency, usage, and temperature for each CPU core.
+  </Step>
+  <Step title="Configuration Status">
+    View whether a custom config file is in use and its location.
+  </Step>
+</Steps>
+
+## GUI Layout
+
+The interface is organized into several sections:
+
+### Header Bar
+
+- Application title: "auto-cpufreq"
+- Window controls (minimize, maximize, close)
+
+### Main Content Area
+
+#### System Information Panel
+
+Displays static system details:
+- Linux distribution and version
+- Kernel version
+- CPU model and architecture
+- Number of cores
+- CPU driver (e.g., intel_pstate, acpi-cpufreq)
+
+#### Statistics Panel (When Daemon is Running)
+
+Shows real-time data:
+- **Battery section**: Status, percentage, AC power, charging thresholds
+- **CPU Frequency Scaling**: Current governor, EPP settings, turbo boost state
+- **Per-Core Stats**: Table with columns for Core ID, Usage %, Temperature, Frequency
+- **System Stats**: Total CPU usage, system load, average temperature
+
+#### Control Panel
+
+Provides action buttons:
+
+<CardGroup cols={2}>
+  <Card title="Install" icon="download">
+    Install the daemon (only shown when not installed).
+  </Card>
+  <Card title="Remove" icon="trash">
+    Uninstall the daemon completely.
+  </Card>
+  <Card title="Restart" icon="rotate">
+    Restart the daemon to apply configuration changes.
+  </Card>
+  <Card title="View Stats" icon="chart-line">
+    Open stats view in terminal (launches auto-cpufreq --stats).
+  </Card>
+</CardGroup>
+
+## Installing the Daemon via GUI
+
+To install the daemon using the graphical interface:
+
+<Steps>
+  <Step title="Launch the GUI">
+    Open auto-cpufreq from your application menu or run `auto-cpufreq-gtk`.
+  </Step>
+  <Step title="Click Install">
+    Click the **Install** button in the main window.
+  </Step>
+  <Step title="Enter Password">
+    When prompted, enter your sudo password to authorize the installation.
+  </Step>
+  <Step title="Wait for Completion">
+    The GUI will show installation progress and display a success message.
+  </Step>
+  <Step title="Access Full Features">
+    After installation, the GUI refreshes to show all management and statistics features.
+  </Step>
+</Steps>
+
+<Info>
+  The GUI installation performs the same steps as running `sudo auto-cpufreq --install` from the command line, including disabling conflicting services.
+</Info>
+
+## GUI Capabilities
+
+The GUI provides visual access to most auto-cpufreq functionality:
+
+### Supported via GUI
+
+<Accordion title="✅ Daemon Management">
+  - Install daemon
+  - Remove daemon
+  - View daemon status
+  - Restart daemon
+</Accordion>
+
+<Accordion title="✅ Live Statistics">
+  - Real-time CPU metrics
+  - Battery monitoring
+  - Governor and turbo status
+  - Per-core temperature and frequency
+  - System load information
+</Accordion>
+
+<Accordion title="✅ System Information">
+  - Distribution details
+  - Hardware information
+  - CPU driver detection
+  - Config file status
+</Accordion>
+
+### Not Available via GUI
+
+Some features still require command-line access:
+
+<Accordion title="❌ Configuration Editing">
+  Config files must be edited manually:
+  ```bash
+  sudo nano /etc/auto-cpufreq.conf
+  ```
+  After editing, restart the daemon via GUI or CLI.
+</Accordion>
+
+<Accordion title="❌ Monitor and Live Modes">
+  Use CLI commands:
+  ```bash
+  sudo auto-cpufreq --monitor
+  sudo auto-cpufreq --live
+  ```
+</Accordion>
+
+<Accordion title="❌ Governor Overrides">
+  Set via CLI:
+  ```bash
+  sudo auto-cpufreq --force=performance
+  sudo auto-cpufreq --turbo=always
+  ```
+</Accordion>
+
+<Accordion title="❌ Bluetooth Boot Settings">
+  Manage via CLI:
+  ```bash
+  sudo auto-cpufreq --bluetooth_boot_off
+  sudo auto-cpufreq --bluetooth_boot_on
+  ```
+</Accordion>
+
+<Accordion title="❌ Debug and Update">
+  Use CLI commands:
+  ```bash
+  auto-cpufreq --debug
+  sudo auto-cpufreq --update
+  ```
+</Accordion>
+
+## GUI Screenshots
+
+### Desktop Entry
+
+<Frame>
+  <img src="https://github.com/user-attachments/assets/f426d62b-00b0-4fa5-a72e-b352016ed448" alt="auto-cpufreq desktop entry icon" />
+</Frame>
+
+The auto-cpufreq application appears in your system's application menu with a distinctive icon.
+
+### Installation Screen
+
+<Frame>
+  <img src="https://github.com/user-attachments/assets/5af47e5e-8b9e-4ff6-9ffc-e78acb623ce4" alt="auto-cpufreq GUI install button" />
+</Frame>
+
+Before installation, the GUI presents a clean interface with system information and an Install button.
+
+### Main GUI Interface
+
+<Frame>
+  <img src="https://github.com/user-attachments/assets/9c7715c4-16b7-4a5c-86be-4c390276d9e8" alt="Full auto-cpufreq GUI interface" />
+</Frame>
+
+After daemon installation, the full interface displays real-time statistics, controls, and system metrics.
+
+## Technical Details
+
+### GUI Implementation
+
+The GUI is built using:
+
+- **GTK 3**: Cross-platform widget toolkit
+- **Python GI**: PyGObject bindings for GTK
+- **PolicyKit**: For privilege escalation prompts
+
+### Required Dependencies
+
+The GUI requires additional Python packages:
+
+```bash
+# View GUI-specific dependencies
+cat pyproject.toml | grep -A 10 "\[tool.poetry.extras\]"
+```
+
+When installing from source with GUI support:
+
+```bash
+poetry install --extras gui
+```
+
+### Desktop Entry File
+
+The desktop entry is installed to:
+```
+/usr/share/applications/auto-cpufreq-gtk.desktop
+```
+
+With these contents:
+```ini
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=auto-cpufreq
+Comment=Automatic CPU speed & power optimizer
+Exec=auto-cpufreq-gtk
+Icon=auto-cpufreq
+Terminal=false
+Categories=System;Monitor;
+Keywords=cpu;frequency;power;optimization;
+```
+
+## Troubleshooting GUI Issues
+
+<AccordionGroup>
+  <Accordion title="GUI won't launch">
+    **Possible causes:**
+    - Missing GTK dependencies
+    - Incorrect XDG_RUNTIME_DIR
+    - PolicyKit not configured
+    
+    **Solutions:**
+    ```bash
+    # Check GTK installation
+    python3 -c "import gi; gi.require_version('Gtk', '3.0')"
+    
+    # Try environment wrapper
+    env -i XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR auto-cpufreq-gtk
+    
+    # Check for error messages
+    auto-cpufreq-gtk 2>&1 | less
+    ```
+  </Accordion>
+  
+  <Accordion title="Stats not updating">
+    This indicates the daemon might not be running properly:
+    ```bash
+    # Check daemon status
+    systemctl status auto-cpufreq
+    
+    # View daemon logs
+    journalctl -u auto-cpufreq -n 50
+    
+    # Restart daemon
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="Install button does nothing">
+    Try installing via CLI to see detailed error messages:
+    ```bash
+    sudo auto-cpufreq --install
+    ```
+    Then check for conflicting services or permission issues.
+  </Accordion>
+</AccordionGroup>
+
+## Comparison: GUI vs CLI
+
+<CardGroup cols={2}>
+  <Card title="GUI Advantages" icon="check">
+    - Visual representation of data
+    - No need to remember commands
+    - Real-time graphical stats
+    - Easier for beginners
+    - One-click daemon management
+  </Card>
+  <Card title="CLI Advantages" icon="terminal">
+    - Available via SSH/remote access
+    - Scriptable and automatable
+    - Works in Snap installations
+    - Full feature access
+    - Lighter resource usage
+    - Better for troubleshooting
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Daemon Mode" icon="server" href="/usage/daemon-mode">
+    Learn more about managing the daemon service.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/config-file">
+    Create custom configuration files for specific optimization profiles.
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/commands/overview">
+    Explore all available command-line options.
+  </Card>
+</CardGroup>

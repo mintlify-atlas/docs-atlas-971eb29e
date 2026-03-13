@@ -1,0 +1,184 @@
+---
+title: Platform Profiles
+description: Configure ACPI platform profiles for advanced power management
+---
+
+## What are Platform Profiles?
+
+Platform profiles are a Linux kernel feature that allows you to control system-wide power and performance characteristics through the ACPI firmware interface. They provide a standardized way to switch between different power/performance modes that are implemented at the hardware/firmware level.
+
+Unlike CPU governors (which control CPU frequency scaling), platform profiles affect the **entire system**, including:
+- CPU power management behavior
+- Fan curves and cooling policies
+- GPU performance characteristics
+- System firmware power optimization features
+
+<Info>
+Platform profiles are only available on systems with ACPI firmware support. Many modern laptops from manufacturers like Dell, HP, Lenovo, and others support this feature.
+</Info>
+
+## Available Profile Options
+
+The available platform profiles vary by manufacturer and model, but common options include:
+
+<CardGroup cols={2}>
+  <Card title="low-power" icon="leaf">
+    Optimizes for maximum battery life. Reduces performance but extends runtime significantly.
+  </Card>
+  <Card title="balanced" icon="balance-scale">
+    Default profile that balances performance and power consumption for everyday use.
+  </Card>
+  <Card title="performance" icon="gauge-high">
+    Maximizes system performance. Uses more power but provides the best responsiveness and speed.
+  </Card>
+  <Card title="quiet" icon="volume-xmark">
+    Available on some systems. Prioritizes low fan noise over performance.
+  </Card>
+</CardGroup>
+
+### Check Available Profiles
+
+To see which profiles your system supports, run:
+
+```bash
+cat /sys/firmware/acpi/platform_profile_choices
+```
+
+Example output:
+```
+low-power balanced performance
+```
+
+## Configuration
+
+You can configure different platform profiles for battery and charger modes in your auto-cpufreq configuration file.
+
+### Configuration File Location
+
+auto-cpufreq looks for configuration files in this order:
+1. `--config <FILE>` (if provided as command-line argument)
+2. `$XDG_CONFIG_HOME/auto-cpufreq/auto-cpufreq.conf` (user-specific)
+3. `/etc/auto-cpufreq.conf` (system-wide)
+
+### Configuration Syntax
+
+#### Battery Mode (Optimized for Battery Life)
+
+```ini
+[battery]
+# Use low-power profile when on battery
+platform_profile = low-power
+```
+
+#### Charger Mode (Optimized for Performance)
+
+```ini
+[charger]
+# Use performance profile when plugged in
+platform_profile = performance
+```
+
+### Complete Example
+
+Here's a complete configuration that sets different profiles for battery and charger:
+
+```ini /etc/auto-cpufreq.conf
+# Settings when connected to power
+[charger]
+governor = performance
+platform_profile = performance
+turbo = auto
+
+# Settings when on battery
+[battery]
+governor = powersave
+platform_profile = low-power
+turbo = auto
+```
+
+## How It Works
+
+When you configure a platform profile, auto-cpufreq:
+
+1. Checks if your system supports platform profiles by looking for `/sys/firmware/acpi/platform_profile`
+2. Validates that your requested profile is available on your system
+3. Applies the profile by writing to the ACPI interface
+4. Switches profiles automatically when power state changes (battery ↔ charger)
+
+<Note>
+If you specify a platform profile but your system doesn't support it, auto-cpufreq will display:
+```
+Not setting Platform Profile (not supported by system)
+```
+This is normal and won't prevent other features from working.
+</Note>
+
+## Use Cases
+
+<Tabs>
+  <Tab title="Laptop Users">
+    **Battery Mode**: Use `low-power` profile to maximize battery life during mobile work.
+    
+    **Charger Mode**: Switch to `performance` profile when plugged in for maximum responsiveness during intensive tasks.
+  </Tab>
+  
+  <Tab title="Gaming">
+    Set `performance` profile when on charger to ensure GPU and CPU run at maximum capability during gaming sessions.
+  </Tab>
+  
+  <Tab title="Quiet Work">
+    Use `quiet` or `low-power` profile during meetings or library work to minimize fan noise, even when plugged in.
+  </Tab>
+</Tabs>
+
+## Kernel Documentation
+
+For technical details about the platform profile interface, refer to the official Linux kernel documentation:
+
+<Card
+  title="Linux Kernel Platform Profile Documentation"
+  icon="book"
+  href="https://www.kernel.org/doc/html/latest/userspace-api/sysfs-platform_profile.html"
+>
+  Official documentation for the ACPI platform profile sysfs interface
+</Card>
+
+## Troubleshooting
+
+### Profile Not Supported
+
+If platform profiles aren't working:
+
+1. **Check if your system supports it**:
+   ```bash
+   ls /sys/firmware/acpi/platform_profile
+   ```
+   If this file doesn't exist, your system doesn't support platform profiles.
+
+2. **Verify available options**:
+   ```bash
+   cat /sys/firmware/acpi/platform_profile_choices
+   ```
+
+3. **Check current profile**:
+   ```bash
+   cat /sys/firmware/acpi/platform_profile
+   ```
+
+### Profile Changes Not Taking Effect
+
+After modifying your configuration:
+
+```bash
+# Restart the auto-cpufreq daemon
+sudo systemctl restart auto-cpufreq
+
+# Check the logs
+auto-cpufreq --stats
+```
+
+## Related Features
+
+- [CPU Governors](/configuration/governor-override) - Control CPU frequency scaling behavior
+- [Turbo Boost](/configuration/turbo-override) - Manage CPU turbo mode
+- [Energy Performance Preference](/configuration/power-profiles) - Fine-tune Intel EPP settings

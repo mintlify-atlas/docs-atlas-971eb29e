@@ -1,0 +1,289 @@
+---
+title: "--remove"
+description: "Remove the auto-cpufreq daemon"
+icon: "trash"
+---
+
+# Remove Daemon
+
+The `--remove` command uninstalls the auto-cpufreq daemon and removes all persistent changes, returning your system to its pre-installation state.
+
+## Usage
+
+```bash
+sudo auto-cpufreq --remove
+```
+
+<Warning>
+This will stop the daemon and disable automatic CPU optimizations. Your system will return to default CPU management.
+</Warning>
+
+## What It Does
+
+The remove command:
+
+1. **Stops** the running daemon service
+2. **Disables** the service from starting on boot
+3. **Removes** the systemd service unit file
+4. **Deletes** the statistics file
+5. **Optionally** re-enables previously disabled services
+
+<Note>
+Governor and turbo overrides set with `--force` or `--turbo` are NOT removed. Reset them manually if needed.
+</Note>
+
+## Removal Process
+
+<Steps>
+  <Step title="Stop the service">
+    ```bash
+    systemctl stop auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Disable on boot">
+    ```bash
+    systemctl disable auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Remove service file">
+    Deletes `/etc/systemd/system/auto-cpufreq.service`
+  </Step>
+  
+  <Step title="Reload systemd">
+    ```bash
+    systemctl daemon-reload
+    ```
+  </Step>
+  
+  <Step title="Clean up files">
+    Removes:
+    - `/var/run/auto-cpufreq.stats`
+    - Any temporary files
+  </Step>
+</Steps>
+
+## Example Output
+
+```bash
+$ sudo auto-cpufreq --remove
+
+------------------------------ auto-cpufreq -------------------------------
+
+Automatic CPU speed & power optimizer for Linux
+
+------------------------------ Removing Daemon ----------------------------
+
+Stopping auto-cpufreq daemon...
+Disabling auto-cpufreq daemon at boot...
+Removing auto-cpufreq systemd service...
+Reloading systemd manager configuration...
+
+auto-cpufreq daemon removed successfully!
+
+Note: Conflicting services (power-profiles-daemon, tuned) remain disabled.
+Re-enable them manually if desired:
+  sudo systemctl unmask power-profiles-daemon
+  sudo systemctl enable --now power-profiles-daemon
+```
+
+## What Gets Removed
+
+### Files Deleted
+
+- **Systemd service**: `/etc/systemd/system/auto-cpufreq.service`
+- **Stats file**: `/var/run/auto-cpufreq.stats`
+- **Snap stats** (Snap installs): `/var/snap/auto-cpufreq/current/auto-cpufreq.stats`
+
+### Files Kept
+
+<Info>
+These files are NOT removed and must be manually deleted if desired:
+</Info>
+
+- **Configuration file**: `/etc/auto-cpufreq.conf`
+- **Override files**: `/opt/auto-cpufreq/override.pickle`, `/opt/auto-cpufreq/turbo-override.pickle`
+- **Binary/installation**: `/usr/local/bin/auto-cpufreq` and related files
+- **Battery thresholds**: Settings persist in `/sys/class/power_supply/`
+
+## Snap Removal
+
+For Snap installations, use:
+
+```bash
+# Remove daemon only (keep Snap installed)
+snapctl set daemon=disabled
+snapctl stop --disable auto-cpufreq
+
+# Or completely remove Snap package
+sudo snap remove auto-cpufreq
+```
+
+## AUR Removal
+
+For AUR installations:
+
+```bash
+# Stop and disable service
+sudo systemctl disable --now auto-cpufreq
+
+# Uninstall package
+yay -R auto-cpufreq
+# or
+sudo pacman -R auto-cpufreq
+```
+
+## Complete Uninstallation
+
+To completely remove auto-cpufreq from your system:
+
+<Steps>
+  <Step title="Remove daemon">
+    ```bash
+    sudo auto-cpufreq --remove
+    ```
+  </Step>
+  
+  <Step title="Reset overrides">
+    ```bash
+    sudo auto-cpufreq --force=reset
+    sudo auto-cpufreq --turbo=auto
+    ```
+  </Step>
+  
+  <Step title="Delete configuration">
+    ```bash
+    sudo rm /etc/auto-cpufreq.conf
+    sudo rm -rf /opt/auto-cpufreq/
+    ```
+  </Step>
+  
+  <Step title="Reset battery thresholds (if configured)">
+    ```bash
+    echo 0 | sudo tee /sys/class/power_supply/BAT0/charge_start_threshold
+    echo 100 | sudo tee /sys/class/power_supply/BAT0/charge_stop_threshold
+    ```
+  </Step>
+  
+  <Step title="Uninstall software (installer method)">
+    ```bash
+    cd auto-cpufreq
+    sudo ./auto-cpufreq-installer --remove
+    ```
+  </Step>
+  
+  <Step title="Re-enable conflicting services (optional)">
+    ```bash
+    sudo systemctl unmask power-profiles-daemon
+    sudo systemctl enable --now power-profiles-daemon
+    ```
+  </Step>
+</Steps>
+
+## Re-enabling Conflicting Services
+
+auto-cpufreq disables conflicting services during installation. After removal, you may want to re-enable them:
+
+<Tabs>
+  <Tab title="GNOME Power Profiles">
+    ```bash
+    sudo systemctl unmask power-profiles-daemon
+    sudo systemctl enable --now power-profiles-daemon
+    ```
+  </Tab>
+  
+  <Tab title="TLP">
+    ```bash
+    sudo systemctl enable --now tlp
+    sudo systemctl start tlp
+    ```
+  </Tab>
+  
+  <Tab title="TuneD">
+    ```bash
+    sudo systemctl enable --now tuned
+    sudo tuned-adm profile balanced
+    ```
+  </Tab>
+</Tabs>
+
+## Verification
+
+Verify the daemon is removed:
+
+```bash
+# Check service status (should show not found or inactive)
+systemctl status auto-cpufreq
+
+# Check if service file exists
+ls /etc/systemd/system/auto-cpufreq.service
+
+# Try to view stats (should fail if fully removed)
+auto-cpufreq --stats
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Service still running after removal">
+    Manually stop and disable:
+    ```bash
+    sudo systemctl stop auto-cpufreq
+    sudo systemctl disable auto-cpufreq
+    sudo rm /etc/systemd/system/auto-cpufreq.service
+    sudo systemctl daemon-reload
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied">
+    Ensure you're using `sudo`:
+    ```bash
+    sudo auto-cpufreq --remove
+    ```
+  </Accordion>
+  
+  <Accordion title="Daemon not installed error">
+    If you get this error, the daemon is already removed or was never installed. You can proceed with software uninstallation if needed.
+  </Accordion>
+  
+  <Accordion title="Battery thresholds still active">
+    Manually reset battery thresholds:
+    ```bash
+    echo 0 | sudo tee /sys/class/power_supply/BAT0/charge_start_threshold  
+    echo 100 | sudo tee /sys/class/power_supply/BAT0/charge_stop_threshold
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## After Removal
+
+After removing the daemon:
+
+1. **CPU behavior** returns to kernel defaults
+2. **Battery life** may decrease compared to auto-cpufreq optimizations
+3. **CPU temperature** may increase
+4. **Performance** returns to default (may be higher or lower depending on your hardware)
+
+If you want different power management, consider re-enabling:
+- GNOME Power Profiles (GNOME desktops)
+- TLP (general purpose)
+- TuneD (RHEL/Fedora)
+- laptop-mode-tools (older systems)
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Install Daemon" icon="download" href="/commands/install">
+    Re-install auto-cpufreq daemon
+  </Card>
+  <Card title="Force Override" icon="gauge-high" href="/commands/force">
+    Reset governor overrides
+  </Card>
+  <Card title="Turbo Override" icon="bolt" href="/commands/turbo">
+    Reset turbo overrides  
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    View daemon statistics (before removal)
+  </Card>
+</CardGroup>

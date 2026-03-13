@@ -1,0 +1,248 @@
+---
+title: Governor Override
+description: Override auto-cpufreq's automatic governor selection using the --force flag
+---
+
+By default, auto-cpufreq uses "balanced" mode which automatically selects the appropriate CPU frequency governor based on power state, load, and temperature. However, you can override this behavior to force a specific governor.
+
+## Using the --force Flag
+
+The `--force` flag allows you to override the automatic governor selection:
+
+```bash
+sudo auto-cpufreq --force=governor
+```
+
+### Available Options
+
+<CardGroup cols={3}>
+  <Card title="Performance" icon="gauge-high">
+    Force performance governor
+  </Card>
+  <Card title="Powersave" icon="leaf">
+    Force powersave governor
+  </Card>
+  <Card title="Reset" icon="rotate-left">
+    Remove override and return to automatic mode
+  </Card>
+</CardGroup>
+
+## Performance Mode
+
+Force the CPU to use the performance governor:
+
+```bash
+sudo auto-cpufreq --force=performance
+```
+
+**Characteristics:**
+- Higher default CPU frequencies
+- Maximum responsiveness
+- Higher energy consumption
+- Increased battery drain
+- More heat generation
+
+<Warning>
+Performance mode should only be used when maximum CPU performance is absolutely necessary, as it significantly impacts battery life.
+</Warning>
+
+### When to Use Performance Mode
+
+- **CPU-intensive tasks**: Video rendering, compilation, data processing
+- **Gaming**: When you need consistent high frame rates
+- **Virtual machines**: Running VMs with demanding workloads
+- **Benchmarking**: When you need consistent maximum performance
+- **Plugged in**: When on AC power and heat is not a concern
+
+## Powersave Mode
+
+Force the CPU to use the powersave governor:
+
+```bash
+sudo auto-cpufreq --force=powersave
+```
+
+**Characteristics:**
+- Lower default CPU frequencies
+- Maximum battery life
+- Reduced energy consumption
+- Lower heat generation
+- May reduce performance for intensive tasks
+
+### When to Use Powersave Mode
+
+- **Maximum battery life**: When you need to extend battery runtime
+- **Light workloads**: Web browsing, document editing, video playback
+- **Thermal throttling**: When your system is overheating
+- **Quiet operation**: Reducing fan noise
+- **Power constraints**: When running on limited power (low battery)
+
+## Resetting to Default
+
+Return to auto-cpufreq's automatic "balanced" mode:
+
+```bash
+sudo auto-cpufreq --force=reset
+```
+
+This removes the governor override and allows auto-cpufreq to automatically manage the CPU governor based on:
+- Power state (charging vs. battery)
+- CPU load and usage
+- CPU temperature
+- System load
+
+<Info>
+The "balanced" mode provides the best trade-off between performance and battery life for most users and workloads.
+</Info>
+
+## Persistence
+
+<Warning>
+Any governor override set with `--force` will **persist across reboots**. The override is saved to disk and continues to apply even after restarting your system.
+</Warning>
+
+To check the current override status:
+
+```bash
+sudo auto-cpufreq --stats
+```
+
+If an override is active, you'll see a warning message:
+
+```
+Warning: governor overwritten using `--force` flag.
+```
+
+## Override Priority
+
+Governor override takes precedence over:
+- Configuration file governor settings
+- Automatic battery state detection
+- System load-based decisions
+
+The override is stored in:
+- **Non-Snap**: `/opt/auto-cpufreq/override.pickle`
+- **Snap**: `/var/snap/auto-cpufreq/current/override.pickle`
+
+## Checking Current Governor
+
+View the currently active CPU governor:
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+```
+
+Or check all available governors:
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+```
+
+Common governors include:
+- `performance` - Maximum performance
+- `powersave` - Maximum power saving
+- `schedutil` - Scheduler-based scaling (default on modern kernels)
+- `ondemand` - Dynamic scaling based on load
+- `conservative` - Gradual frequency adjustments
+
+## Configuration File vs Override
+
+You can set governors in the [configuration file](/configuration/config-file), but the `--force` override takes precedence:
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+governor = performance
+
+[battery]
+governor = powersave
+```
+
+If you use both:
+1. `--force` override applies first (if set)
+2. Config file governor applies (if no override)
+3. Auto-cpufreq defaults apply (if no override or config)
+
+<Note>
+If you want config file settings to apply, remember to reset any active override with `--force=reset`.
+</Note>
+
+## Examples
+
+### Temporary Performance Boost
+
+For a gaming session or intensive work:
+
+```bash
+# Enable performance mode
+sudo auto-cpufreq --force=performance
+
+# Do your intensive work
+# ...
+
+# Return to balanced mode
+sudo auto-cpufreq --force=reset
+```
+
+### Extend Battery Life
+
+When running low on battery:
+
+```bash
+# Enable powersave mode
+sudo auto-cpufreq --force=powersave
+
+# Continue working with extended battery life
+# ...
+
+# Return to balanced mode when charging
+sudo auto-cpufreq --force=reset
+```
+
+## Troubleshooting
+
+### Override Not Working
+
+If the governor override doesn't seem to apply:
+
+1. **Check daemon is running**:
+   ```bash
+   sudo systemctl status auto-cpufreq
+   ```
+
+2. **Verify the override was set**:
+   ```bash
+   sudo auto-cpufreq --stats
+   ```
+
+3. **Check for conflicting services**:
+   - GNOME Power Profiles daemon
+   - TLP
+   - laptop-mode-tools
+
+### Governor Not Available
+
+If you get an error about the governor not being available:
+
+```bash
+# Check available governors
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+```
+
+You may need to load the appropriate kernel module or change CPU drivers.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration File" icon="file-lines" href="/configuration/config-file">
+    Set governors in the config file
+  </Card>
+  <Card title="Turbo Override" icon="rocket" href="/configuration/turbo-override">
+    Control turbo boost behavior
+  </Card>
+  <Card title="Power Profiles" icon="bolt" href="/configuration/power-profiles">
+    Configure EPP and platform profiles
+  </Card>
+  <Card title="Daemon Mode" icon="server" href="/usage/daemon-mode">
+    Install auto-cpufreq as a system service
+  </Card>
+</CardGroup>

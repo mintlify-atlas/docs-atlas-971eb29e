@@ -1,0 +1,148 @@
+---
+title: "Introduction"
+description: "Automatic CPU speed & power optimizer for Linux"
+---
+
+<img
+  className="block dark:hidden"
+  src="/logo.png"
+  alt="auto-cpufreq logo"
+  style={{ width: '200px', marginBottom: '2rem' }}
+/>
+<img
+  className="hidden dark:block"
+  src="/logo.png"
+  alt="auto-cpufreq logo"
+  style={{ width: '200px', marginBottom: '2rem' }}
+/>
+
+# Welcome to auto-cpufreq
+
+auto-cpufreq is an automatic CPU speed and power optimizer for Linux that actively monitors your laptop's battery state, CPU usage, CPU temperature, and system load to improve battery life without compromising performance.
+
+## Why auto-cpufreq?
+
+One of the problems with Linux today on laptops is that the CPU will run in an unoptimized manner which negatively impacts battery life. For example, the CPU may run using the "performance" governor with turbo boost enabled regardless of whether it's plugged into a power outlet or not.
+
+auto-cpufreq automatically makes CPU frequency-related changes based on:
+
+- **Battery state** - Different profiles for AC power vs. battery
+- **CPU usage** - Scales frequency based on actual load
+- **CPU temperature** - Prevents overheating by adjusting frequency
+- **System load** - Optimizes based on overall system demand
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get auto-cpufreq running in minutes
+  </Card>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Choose your installation method
+  </Card>
+  <Card
+    title="Configuration"
+    icon="sliders"
+    href="/configuration/config-file"
+  >
+    Customize auto-cpufreq for your system
+  </Card>
+  <Card
+    title="Commands"
+    icon="terminal"
+    href="/commands/overview"
+  >
+    Explore all available commands
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<AccordionGroup>
+  <Accordion title="Automatic CPU Frequency Scaling">
+    Dynamically adjusts CPU frequency based on battery state, usage, temperature, and system load to balance performance and power consumption.
+  </Accordion>
+  
+  <Accordion title="Governor Management">
+    Automatically switches between performance, powersave, and balanced governors based on power source and system state.
+  </Accordion>
+  
+  <Accordion title="Turbo Boost Control">
+    Intelligently enables or disables CPU turbo boost to optimize for performance when needed and battery life when appropriate.
+  </Accordion>
+  
+  <Accordion title="Real-time Monitoring">
+    View live statistics showing CPU frequency, usage, temperature, battery state, and optimization decisions.
+  </Accordion>
+  
+  <Accordion title="Battery Charging Thresholds">
+    Set battery charging start and stop thresholds to extend battery lifespan on supported devices (ThinkPad, IdeaPad, ASUS).
+  </Accordion>
+  
+  <Accordion title="GUI Interface">
+    Manage auto-cpufreq through an intuitive graphical interface alongside the powerful CLI.
+  </Accordion>
+</AccordionGroup>
+
+## Supported Devices
+
+auto-cpufreq supports devices with:
+
+- **Intel CPUs** - Full support for Intel processors
+- **AMD CPUs** - Full support for AMD processors  
+- **ARM CPUs** - Support for ARM-based systems
+
+<Note>
+auto-cpufreq was developed to improve performance and battery life on laptops, but it can also run on desktops and servers to lower power consumption.
+</Note>
+
+## How It Works
+
+auto-cpufreq offers three operating modes:
+
+1. **Monitor mode** - Shows suggestions without making changes
+2. **Live mode** - Makes temporary optimizations (lost on reboot)
+3. **Daemon mode** - Persistent automatic optimizations via systemd service
+
+<Info>
+auto-cpufreq aims to replace tools like TLP for CPU frequency management. After installing auto-cpufreq, it's recommended to remove TLP to avoid conflicts.
+</Info>
+
+## Community & Support
+
+<CardGroup cols={2}>
+  <Card
+    title="GitHub Repository"
+    icon="github"
+    href="https://github.com/AdnanHodzic/auto-cpufreq"
+  >
+    Star the project and contribute on GitHub
+  </Card>
+  <Card
+    title="Discord Community"
+    icon="discord"
+    href="https://discord.gg/Sjauxtj6kH"
+  >
+    Join the auto-cpufreq Discord server
+  </Card>
+  <Card
+    title="Report Issues"
+    icon="bug"
+    href="https://github.com/AdnanHodzic/auto-cpufreq/issues"
+  >
+    Found a bug? Submit an issue
+  </Card>
+  <Card
+    title="AI Chatbot"
+    icon="robot"
+    href="https://foolcontrol.org/?p=4903"
+  >
+    Get instant help from the GenAI chatbot
+  </Card>
+</CardGroup>

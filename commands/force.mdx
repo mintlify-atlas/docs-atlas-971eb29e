@@ -1,0 +1,301 @@
+---
+title: "--force"
+description: "Override CPU governor selection"
+icon: "gauge-high"
+---
+
+# Force Governor Override
+
+The `--force` command allows you to manually override auto-cpufreq's automatic governor selection, forcing the use of either `performance` or `powersave` mode.
+
+## Usage
+
+```bash
+# Force performance mode
+sudo auto-cpufreq --force=performance
+
+# Force powersave mode
+sudo auto-cpufreq --force=powersave
+
+# Reset to automatic mode
+sudo auto-cpufreq --force=reset
+```
+
+<Warning>
+Governor overrides persist across reboots until explicitly reset. The daemon must not be running when setting overrides.
+</Warning>
+
+## Available Modes
+
+<CardGroup cols={2}>
+  <Card title="Performance" icon="gauge-max">
+    Forces performance governor for maximum CPU performance regardless of battery state
+  </Card>
+  <Card title="Powersave" icon="leaf">
+    Forces powersave governor for maximum battery life regardless of AC power
+  </Card>
+  <Card title="Reset" icon="rotate-left">
+    Returns to automatic mode where auto-cpufreq decides based on battery state
+  </Card>
+</CardGroup>
+
+## How It Works
+
+When you set a governor override:
+
+1. auto-cpufreq creates an override file at `/opt/auto-cpufreq/override.pickle`
+2. The daemon (if running) reads this file on next cycle
+3. The specified governor is applied regardless of battery state
+4. The override persists until you reset it
+
+## Performance Mode
+
+```bash
+sudo auto-cpufreq --force=performance
+```
+
+**What it does:**
+- Sets CPU governor to `performance` on all cores
+- Allows higher CPU frequencies
+- Turbo boost managed automatically (unless also overridden)
+- Applied even when on battery power
+
+**Use cases:**
+- Gaming or intensive tasks on battery
+- Benchmarking
+- Video rendering
+- Compilation jobs
+- When consistent high performance is needed
+
+**Impact:**
+- ⚡ Higher CPU performance
+- 🔋 Significantly reduced battery life
+- 🌡️ Higher CPU temperatures
+- 📊 Higher power consumption
+
+<Note>
+Performance mode will drain your battery faster. Only use when high performance is required.
+</Note>
+
+## Powersave Mode
+
+```bash
+sudo auto-cpufreq --force=powersave
+```
+
+**What it does:**
+- Sets CPU governor to `powersave` on all cores
+- Limits CPU to lower frequencies
+- Turbo boost managed automatically (usually disabled)
+- Applied even when plugged into AC power
+
+**Use cases:**
+- Maximizing battery life
+- Reducing heat on AC power
+- Quiet operation (lower fan speeds)
+- Running on low battery
+- Reducing power consumption on desktops
+
+**Impact:**
+- 🔋 Maximum battery life
+- ❄️ Lower temperatures
+- 🔇 Quieter operation (less fan noise)
+- 🐌 Reduced CPU performance
+
+<Tip>
+Powersave mode on AC power is useful for reducing noise in quiet environments or for light tasks.
+</Tip>
+
+## Reset to Automatic
+
+```bash
+sudo auto-cpufreq --force=reset
+```
+
+**What it does:**
+- Removes the governor override file
+- Returns to automatic governor selection
+- auto-cpufreq chooses based on battery state:
+  - **On battery**: powersave governor
+  - **On AC power**: performance or balanced governor
+
+## Checking Current Override
+
+To see if an override is active:
+
+```bash
+# View stats (shows which governor is applied)
+auto-cpufreq --stats
+
+# Check override file directly
+cat /opt/auto-cpufreq/override.pickle 2>/dev/null && echo "Override active" || echo "No override"
+```
+
+## Override with Daemon
+
+If the daemon is installed:
+
+<Steps>
+  <Step title="Stop the daemon">
+    ```bash
+    sudo systemctl stop auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Set override">
+    ```bash
+    sudo auto-cpufreq --force=performance
+    ```
+  </Step>
+  
+  <Step title="Start the daemon">
+    ```bash
+    sudo systemctl start auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Verify">
+    ```bash
+    auto-cpufreq --stats
+    ```
+  </Step>
+</Steps>
+
+<Info>
+The daemon will detect the override file and apply the forced governor on its next optimization cycle (within 2 seconds).
+</Info>
+
+## Using with Configuration File
+
+Governor overrides take priority over configuration file settings:
+
+**Priority order (highest to lowest):**
+1. Command-line `--force` override
+2. Configuration file `/etc/auto-cpufreq.conf`
+3. auto-cpufreq automatic selection
+
+Example:
+
+```bash
+# Even if config says:
+# [battery]
+# governor = powersave
+
+# This override wins:
+sudo auto-cpufreq --force=performance
+```
+
+## Temporary vs Permanent Override
+
+| Method | Persists after reboot | Persists after daemon restart | Best for |
+|--------|----------------------|-------------------------------|----------|
+| `--force` | ✅ Yes | ✅ Yes | Long-term overrides |
+| Config file | ✅ Yes | ✅ Yes | Permanent custom profiles |
+| Live mode | ❌ No | ❌ No | Temporary testing |
+
+## Combining with Turbo Override
+
+You can combine governor and turbo overrides:
+
+```bash
+# Maximum performance
+sudo auto-cpufreq --force=performance
+sudo auto-cpufreq --turbo=always
+
+# Maximum battery savings
+sudo auto-cpufreq --force=powersave
+sudo auto-cpufreq --turbo=never
+
+# Reset both
+sudo auto-cpufreq --force=reset
+sudo auto-cpufreq --turbo=auto
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Daemon must not be running error">
+    Stop the daemon first:
+    ```bash
+    sudo systemctl stop auto-cpufreq
+    sudo auto-cpufreq --force=performance
+    sudo systemctl start auto-cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="Override not being applied">
+    Verify the daemon is running and check stats:
+    ```bash
+    systemctl status auto-cpufreq
+    auto-cpufreq --stats
+    ```
+    
+    Check for conflicting services:
+    ```bash
+    systemctl status power-profiles-daemon
+    ```
+  </Accordion>
+  
+  <Accordion title="Performance mode not improving performance">
+    Check if CPU driver supports performance governor:
+    ```bash
+    cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+    ```
+    
+    Some drivers (intel_pstate) may not have traditional governors.
+  </Accordion>
+  
+  <Accordion title="Cannot reset override">
+    Manually delete the override file:
+    ```bash
+    sudo rm /opt/auto-cpufreq/override.pickle
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Gaming on Battery" icon="gamepad">
+    ```bash
+    sudo auto-cpufreq --force=performance
+    sudo auto-cpufreq --turbo=always
+    ```
+  </Card>
+  <Card title="Maximum Battery Life" icon="battery-full">
+    ```bash
+    sudo auto-cpufreq --force=powersave
+    sudo auto-cpufreq --turbo=never
+    ```
+  </Card>
+  <Card title="Quiet AC Operation" icon="volume-off">
+    ```bash
+    sudo auto-cpufreq --force=powersave
+    # Keeps fans quiet while plugged in
+    ```
+  </Card>
+  <Card title="Normal Operation" icon="gear">
+    ```bash
+    sudo auto-cpufreq --force=reset
+    sudo auto-cpufreq --turbo=auto
+    ```
+  </Card>
+</CardGroup>
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Turbo Override" icon="bolt" href="/commands/turbo">
+    Force turbo boost mode
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    View current governor
+  </Card>
+  <Card title="Config File" icon="file-lines" href="/configuration/config-file">
+    Set governors in configuration
+  </Card>
+  <Card title="Governor Overview" icon="book" href="/configuration/governor-override">
+    Learn more about governor override
+  </Card>
+</CardGroup>

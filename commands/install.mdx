@@ -1,0 +1,304 @@
+---
+title: "--install"
+description: "Install the auto-cpufreq daemon for permanent optimizations"
+icon: "download"
+---
+
+# Install Daemon
+
+The `--install` command installs the auto-cpufreq daemon as a systemd service, enabling permanent automatic CPU optimizations that persist across reboots.
+
+## Usage
+
+```bash
+sudo auto-cpufreq --install
+```
+
+<Note>
+This command requires root privileges and will set up auto-cpufreq to run automatically on system boot.
+</Note>
+
+## What It Does
+
+The install command:
+
+1. **Checks** for conflicting services (GNOME Power Profiles, TuneD, TLP)
+2. **Disables** conflicting services automatically
+3. **Creates** systemd service unit
+4. **Enables** the service to start on boot
+5. **Starts** the daemon immediately
+6. **Optionally** disables Bluetooth on boot
+
+## Installation Process
+
+<Steps>
+  <Step title="Pre-installation checks">
+    auto-cpufreq verifies:
+    - No existing daemon is running
+    - Available CPU governors
+    - System compatibility
+  </Step>
+  
+  <Step title="Conflict resolution">
+    Automatically disables:
+    - GNOME Power Profiles daemon (`power-profiles-daemon`)
+    - TuneD daemon
+    - TLP (if detected)
+  </Step>
+  
+  <Step title="Service creation">
+    Creates systemd service at:
+    - `/etc/systemd/system/auto-cpufreq.service` (installer method)
+    - `/usr/lib/systemd/system/auto-cpufreq.service` (AUR method)
+  </Step>
+  
+  <Step title="Service activation">
+    ```bash
+    systemctl enable auto-cpufreq
+    systemctl start auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Bluetooth configuration">
+    Prompts to disable Bluetooth on boot (recommended for battery life)
+  </Step>
+</Steps>
+
+## Example Output
+
+```bash
+$ sudo auto-cpufreq --install
+
+------------------------------ auto-cpufreq -------------------------------
+
+Automatic CPU speed & power optimizer for Linux
+
+------------------------------ Deploying Daemon ---------------------------
+
+Disabling GNOME Power Profiles daemon...
+Masked power-profiles-daemon.service
+
+Creating auto-cpufreq systemd service...
+Created symlink /etc/systemd/system/multi-user.target.wants/auto-cpufreq.service
+
+Enabling auto-cpufreq daemon at boot...
+Starting auto-cpufreq daemon...
+
+auto-cpufreq daemon installed and started successfully!
+
+View live stats: auto-cpufreq --stats
+```
+
+## Verification
+
+After installation, verify the daemon is running:
+
+```bash
+# Check service status
+systemctl status auto-cpufreq
+
+# View live statistics
+auto-cpufreq --stats
+
+# Check service logs  
+sudo journalctl -u auto-cpufreq -f
+```
+
+## GUI Installation
+
+You can also install via the GUI:
+
+```bash
+# Launch GUI
+auto-cpufreq-gtk
+
+# Click "Install" button in the interface
+```
+
+<Info>
+GUI installation is only available with the auto-cpufreq-installer method, not with Snap packages.
+</Info>
+
+## What Gets Installed
+
+### Systemd Service
+
+Service file location:
+```bash
+/etc/systemd/system/auto-cpufreq.service
+```
+
+Service configuration:
+```ini
+[Unit]
+Description=auto-cpufreq - Automatic CPU speed & power optimizer
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/auto-cpufreq --daemon
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Statistics File
+
+Live statistics are written to:
+- **Installer**: `/var/run/auto-cpufreq.stats`
+- **Snap**: `/var/snap/auto-cpufreq/current/auto-cpufreq.stats`
+
+### Override Files
+
+Governor and turbo overrides stored at:
+- **Installer**: `/opt/auto-cpufreq/override.pickle`, `/opt/auto-cpufreq/turbo-override.pickle`  
+- **Snap**: `/var/snap/auto-cpufreq/current/override.pickle`, `/var/snap/auto-cpufreq/current/turbo-override.pickle`
+
+## Installation Methods Comparison
+
+<Tabs>
+  <Tab title="auto-cpufreq-installer">
+    **Recommended method**
+    
+    Advantages:
+    - Automatic conflict resolution
+    - GUI support included
+    - Easy updates with `--update`
+    - Standard installation locations
+    
+    ```bash
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    sudo ./auto-cpufreq-installer
+    sudo auto-cpufreq --install
+    ```
+  </Tab>
+  
+  <Tab title="AUR (Arch Linux)">
+    **For Arch-based distributions**
+    
+    Important differences:
+    - Use `systemctl` instead of `--install`
+    - Manual conflict resolution required
+    - Daemon installer doesn't work
+    
+    ```bash
+    yay -S auto-cpufreq
+    sudo systemctl mask power-profiles-daemon
+    sudo systemctl enable --now auto-cpufreq
+    ```
+  </Tab>
+  
+  <Tab title="Snap">
+    **Snap Store method**
+    
+    Limitations:
+    - No GUI support
+    - Requires manual conflict resolution
+    - Different command syntax
+    
+    ```bash
+    sudo snap install auto-cpufreq
+    # Use power_helper.py to disable conflicts
+    snapctl set daemon=enabled
+    snapctl start --enable auto-cpufreq
+    ```
+  </Tab>
+</Tabs>
+
+## Post-Installation
+
+### Recommended Steps
+
+1. **View statistics** to confirm it's working:
+   ```bash
+   auto-cpufreq --stats
+   ```
+
+2. **Check battery life** over several hours/days
+
+3. **Adjust configuration** if needed:
+   ```bash
+   sudo nano /etc/auto-cpufreq.conf
+   sudo systemctl restart auto-cpufreq
+   ```
+
+4. **Monitor temperature** to ensure no overheating
+
+### Bluetooth on Boot
+
+During installation, you'll be prompted:
+
+```
+Would you like to disable Bluetooth on boot? [Y/n]
+```
+
+This is recommended for battery life but can be changed later:
+
+```bash
+# Disable Bluetooth on boot
+sudo auto-cpufreq --bluetooth_boot_off
+
+# Enable Bluetooth on boot
+sudo auto-cpufreq --bluetooth_boot_on
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Service fails to start">
+    Check for conflicting services:
+    ```bash
+    systemctl status power-profiles-daemon
+    systemctl status tlp
+    systemctl status tuned
+    ```
+    
+    Manually mask them:
+    ```bash
+    sudo systemctl mask power-profiles-daemon
+    sudo systemctl disable --now tlp
+    sudo systemctl disable --now tuned
+    ```
+  </Accordion>
+  
+  <Accordion title="Daemon already running error">
+    Remove the existing daemon first:
+    ```bash
+    sudo auto-cpufreq --remove
+    sudo auto-cpufreq --install
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied errors">
+    Ensure you're using `sudo`:
+    ```bash
+    sudo auto-cpufreq --install
+    ```
+  </Accordion>
+  
+  <Accordion title="AUR installation issues">
+    For AUR installs, don't use `--install`. Use systemctl:
+    ```bash
+    sudo systemctl enable --now auto-cpufreq
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Remove Daemon" icon="trash" href="/commands/remove">
+    Uninstall the auto-cpufreq daemon
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    View daemon statistics
+  </Card>
+  <Card title="Update" icon="arrow-up" href="/commands/update">
+    Update to latest version
+  </Card>
+  <Card title="Live Mode" icon="circle-play" href="/commands/live">
+    Test before installing daemon
+  </Card>
+</CardGroup>

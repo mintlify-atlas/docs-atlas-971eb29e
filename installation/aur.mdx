@@ -1,0 +1,266 @@
+---
+title: AUR Package (Arch Linux)
+description: Install auto-cpufreq on Arch-based distributions using the AUR
+---
+
+For Arch Linux and Arch-based distributions, auto-cpufreq is available in the Arch User Repository (AUR).
+
+<Note>
+  The AUR Release Package is currently maintained by [MusicalArtist12](https://github.com/MusicalArtist12), [liljaylj](https://github.com/liljaylj), and [parmjotsinghrobot](https://github.com/parmjotsinghrobot).
+</Note>
+
+## Prerequisites
+
+- Arch Linux or Arch-based distribution (Manjaro, EndeavourOS, etc.)
+- AUR helper installed (yay, paru, etc.) or ability to manually build AUR packages
+- Sudo/root access
+
+## Installation Steps
+
+### Using an AUR Helper
+
+<Tabs>
+  <Tab title="yay">
+    ```bash
+    yay -S auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="paru">
+    ```bash
+    paru -S auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="pamac">
+    ```bash
+    pamac install auto-cpufreq
+    ```
+  </Tab>
+</Tabs>
+
+### Manual Installation
+
+<Steps>
+  <Step title="Clone the AUR package">
+    ```bash
+    git clone https://aur.archlinux.org/auto-cpufreq.git
+    cd auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Build and install">
+    ```bash
+    makepkg -si
+    ```
+    This will download dependencies, build the package, and install it.
+  </Step>
+</Steps>
+
+## Post-Installation Steps
+
+### Enable and Start the Daemon
+
+<Warning>
+  The daemon installer provided by auto-cpufreq (`auto-cpufreq --install`) does not work with AUR installations. Use systemctl instead.
+</Warning>
+
+<Steps>
+  <Step title="Disable conflicting services">
+    The GNOME Power Profiles daemon must be manually disabled:
+    ```bash
+    sudo systemctl mask power-profiles-daemon.service
+    ```
+
+    If you're using TuneD:
+    ```bash
+    sudo systemctl mask tuned.service
+    ```
+  </Step>
+
+  <Step title="Enable auto-cpufreq service">
+    ```bash
+    sudo systemctl enable auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Start the service">
+    ```bash
+    sudo systemctl start auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Verify service status">
+    ```bash
+    systemctl status auto-cpufreq
+    ```
+  </Step>
+</Steps>
+
+## AUR Package Differences
+
+The AUR package has some differences from the auto-cpufreq-installer:
+
+<CardGroup cols={2}>
+  <Card title="Installation Path" icon="folder">
+    Links to `/usr/share/` instead of `/usr/local/share/`
+  </Card>
+  <Card title="Service Management" icon="server">
+    Use systemctl commands instead of `auto-cpufreq --install/--remove`
+  </Card>
+  <Card title="Manual Conflict Resolution" icon="triangle-exclamation">
+    Must manually disable conflicting services like power-profiles-daemon
+  </Card>
+  <Card title="Package Management" icon="box">
+    Updates managed through pacman/AUR helper, not `auto-cpufreq --update`
+  </Card>
+</CardGroup>
+
+## Available Packages
+
+### Release Package (Recommended)
+
+[![AUR package](https://repology.org/badge/version-for-repo/aur/auto-cpufreq.svg)](https://aur.archlinux.org/packages/auto-cpufreq)
+
+The release package is actively maintained and tracks stable releases.
+
+```bash
+yay -S auto-cpufreq
+```
+
+### Git Package
+
+<Warning>
+  The Git Package ([auto-cpufreq-git](https://aur.archlinux.org/packages/auto-cpufreq-git)) is separately maintained and was last updated on version 1.9.6. It may be outdated.
+</Warning>
+
+```bash
+yay -S auto-cpufreq-git
+```
+
+## Configuration
+
+After installation, you can configure auto-cpufreq using a config file:
+
+```bash
+sudo nano /etc/auto-cpufreq.conf
+```
+
+See the [Configuration](/configuration) section for detailed options.
+
+## Updating
+
+Update auto-cpufreq using your AUR helper or pacman:
+
+<Tabs>
+  <Tab title="yay">
+    ```bash
+    yay -Syu auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="paru">
+    ```bash
+    paru -Syu auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="pacman">
+    ```bash
+    sudo pacman -Syu
+    ```
+  </Tab>
+</Tabs>
+
+After updating, restart the service:
+
+```bash
+sudo systemctl restart auto-cpufreq
+```
+
+## Uninstalling
+
+<Steps>
+  <Step title="Stop and disable the service">
+    ```bash
+    sudo systemctl stop auto-cpufreq
+    sudo systemctl disable auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Re-enable conflicting services (if desired)">
+    ```bash
+    sudo systemctl unmask power-profiles-daemon.service
+    sudo systemctl enable power-profiles-daemon.service
+    ```
+  </Step>
+
+  <Step title="Remove the package">
+    ```bash
+    # Using yay
+    yay -R auto-cpufreq
+
+    # Or using pacman
+    sudo pacman -R auto-cpufreq
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Service fails to start with conflict error
+
+This usually means power-profiles-daemon is still active:
+
+```bash
+# Check if it's running
+systemctl status power-profiles-daemon.service
+
+# Mask it to prevent it from starting
+sudo systemctl mask power-profiles-daemon.service
+
+# Restart auto-cpufreq
+sudo systemctl restart auto-cpufreq
+```
+
+### CPU not scaling properly
+
+Check the service logs:
+
+```bash
+journalctl -u auto-cpufreq -f
+```
+
+You may need to switch CPU drivers. See the [Troubleshooting](/troubleshooting) section.
+
+### "auto-cpufreq --install" doesn't work
+
+This is expected behavior with AUR installations. Use systemctl instead:
+
+```bash
+sudo systemctl enable --now auto-cpufreq
+```
+
+### Fallback to auto-cpufreq-installer
+
+If the AUR package doesn't work for your system, you can use the [auto-cpufreq-installer](/installation/auto-installer) instead:
+
+```bash
+# Remove AUR package first
+yay -R auto-cpufreq
+
+# Install using the official installer
+git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+cd auto-cpufreq && sudo ./auto-cpufreq-installer
+```
+
+<Note>
+  If the AUR installer doesn't work, please open an issue on the [auto-cpufreq GitHub repository](https://github.com/AdnanHodzic/auto-cpufreq/issues).
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="View Statistics" icon="chart-line" href="/commands/stats">
+    Monitor CPU optimizations in real-time
+  </Card>
+  <Card title="Custom Configuration" icon="sliders" href="/configuration">
+    Fine-tune auto-cpufreq settings
+  </Card>
+</CardGroup>

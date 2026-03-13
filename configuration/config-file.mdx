@@ -1,0 +1,228 @@
+---
+title: Configuration File
+description: Learn how to configure auto-cpufreq using the configuration file
+---
+
+auto-cpufreq can be configured through a configuration file to define custom power management profiles for both charging and battery modes.
+
+## Config File Locations
+
+By default, auto-cpufreq does not use a config file. If you wish to configure auto-cpufreq statically, it looks for a configuration file in the following priority order:
+
+1. **Command line argument**: `--config <FILE>` passed to `auto-cpufreq`
+2. **User-specific configuration**: `$XDG_CONFIG_HOME/auto-cpufreq/auto-cpufreq.conf`
+3. **System-wide configuration**: `/etc/auto-cpufreq.conf`
+
+<Note>
+The command line config argument takes highest priority, followed by the user config, and finally the system-wide config.
+</Note>
+
+## Config File Structure
+
+The configuration file uses INI format with separate sections for different power states:
+
+- `[charger]` - Settings when connected to a power source
+- `[battery]` - Settings when running on battery power
+- `[power_supply_ignore_list]` - Optional section to ignore specific power supplies
+
+## Available Options
+
+### Governor Settings
+
+Specify which CPU frequency governor to use:
+
+```ini
+# See available governors
+# cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+governor = performance  # For charger
+governor = powersave    # For battery
+```
+
+### Energy Performance Preference (EPP)
+
+Control the CPU's energy/performance trade-off:
+
+```ini
+# See available preferences
+# cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences
+energy_performance_preference = performance  # For charger
+energy_performance_preference = power        # For battery
+```
+
+<Info>
+EPP is only available on systems with intel_pstate or amd-pstate drivers in active mode.
+</Info>
+
+### Energy Performance Bias (EPB)
+
+Set Intel CPU energy performance bias (intel_pstate driver only):
+
+```ini
+# Numeric value between 0-15:
+# 0 = maximum performance, 15 = maximum power saving
+# Or use string values:
+# performance (0), balance_performance (4), default (6),
+# balance_power (8), power (15)
+energy_perf_bias = balance_performance  # For charger (default)
+energy_perf_bias = balance_power        # For battery (default)
+```
+
+<Note>
+If the parameter is missing and the hardware supports this setting, the default value will be used:
+- `balance_performance` for charger
+- `balance_power` for battery
+</Note>
+
+### Platform Profile
+
+Set ACPI platform profile if supported by your system:
+
+```ini
+# See available options
+# cat /sys/firmware/acpi/platform_profile_choices
+platform_profile = performance  # For charger
+platform_profile = low-power    # For battery
+```
+
+[Learn more about platform profiles →](/configuration/power-profiles)
+
+### CPU Frequency Limits
+
+Set minimum and maximum CPU frequencies in kHz:
+
+```ini
+# Minimum frequency (in kHz)
+# Example: 800 MHz = 800000 kHz
+scaling_min_freq = 800000
+
+# Maximum frequency (in kHz)
+# Example: 1 GHz = 1000 MHz = 1000000 kHz
+scaling_max_freq = 1000000
+```
+
+<Warning>
+Frequency values must be within your CPU's supported range, otherwise auto-cpufreq will exit with an error.
+</Warning>
+
+### Turbo Boost
+
+Control CPU turbo boost behavior:
+
+```ini
+# Possible values: always, auto, never
+turbo = auto
+```
+
+- **always** - Turbo boost always enabled
+- **auto** - Automatically manages turbo based on load (default)
+- **never** - Turbo boost always disabled
+
+[Learn more about turbo boost →](/configuration/turbo-override)
+
+### Battery Device Selection
+
+Specify which battery device to use:
+
+```ini
+[battery]
+# See available batteries: ls /sys/class/power_supply/
+# If not set, auto-cpufreq will automatically detect the first battery
+battery_device = BAT1
+```
+
+## Complete Example
+
+Here's a complete example configuration file:
+
+```ini /etc/auto-cpufreq.conf
+# Settings for when connected to a power source
+[charger]
+governor = performance
+energy_performance_preference = performance
+# energy_perf_bias = balance_performance
+# platform_profile = performance
+
+# scaling_min_freq = 800000
+# scaling_max_freq = 3500000
+
+turbo = auto
+
+# Settings for when using battery power
+[battery]
+battery_device = BAT0
+governor = powersave
+energy_performance_preference = power
+# energy_perf_bias = balance_power
+# platform_profile = low-power
+
+# scaling_min_freq = 800000
+# scaling_max_freq = 2000000
+
+turbo = auto
+
+# Battery charging thresholds
+# enable_thresholds = true
+# start_threshold = 20
+# stop_threshold = 80
+
+# Ignore specific power supplies (controllers, headphones, etc.)
+# [power_supply_ignore_list]
+# controller1 = xbox_controller
+# headphones = sony_wh1000xm4
+```
+
+## Applying Configuration Changes
+
+After editing the config file, restart the auto-cpufreq daemon:
+
+```bash
+sudo systemctl restart auto-cpufreq.service
+```
+
+For Snap installations:
+
+```bash
+sudo systemctl restart snap.auto-cpufreq.service.service
+```
+
+## Power Supply Ignore List
+
+You may have controllers or headphones that report battery status. When they're on battery, they might cause auto-cpufreq to limit performance. To ignore them:
+
+```ini
+[power_supply_ignore_list]
+# Find power supply names: ls /sys/class/power_supply/
+xboxctrl = xbox_controller_name
+headset = headphone_battery_name
+```
+
+<Note>
+The `hidpp_battery` device is always ignored by default (Logitech devices).
+</Note>
+
+## Verifying Configuration
+
+Check if your configuration file is being used:
+
+```bash
+sudo auto-cpufreq --stats
+```
+
+The output will show which config file is being used (if any).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Governor Override" icon="gauge-high" href="/configuration/governor-override">
+    Force performance or powersave mode
+  </Card>
+  <Card title="Turbo Override" icon="rocket" href="/configuration/turbo-override">
+    Control turbo boost behavior
+  </Card>
+  <Card title="Battery Thresholds" icon="battery-half" href="/configuration/battery-thresholds">
+    Set charging thresholds to preserve battery health
+  </Card>
+  <Card title="Power Profiles" icon="bolt" href="/configuration/power-profiles">
+    Configure EPP, EPB, and platform profiles
+  </Card>
+</CardGroup>

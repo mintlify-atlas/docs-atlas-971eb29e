@@ -1,0 +1,453 @@
+---
+title: Power Profiles
+description: Configure platform profiles, Energy Performance Preferences (EPP), and Energy Performance Bias (EPB)
+---
+
+auto-cpufreq supports multiple power management mechanisms to optimize CPU performance and power consumption. These include platform profiles, EPP (Energy Performance Preference), and EPB (Energy Performance Bias).
+
+## Platform Profiles
+
+Platform profiles provide hardware-level power management control through the ACPI platform profile interface. This is a kernel interface that allows software to control device power states.
+
+### What Are Platform Profiles?
+
+Platform profiles communicate power preferences to the system firmware (BIOS/UEFI), which then adjusts various hardware components accordingly:
+
+- **CPU power limits**
+- **Fan curves**
+- **GPU power states**
+- **Display brightness**
+- **Other device power states**
+
+<Info>
+Platform profiles are available on systems with ACPI platform_profile support (newer laptops, especially ThinkPads).
+</Info>
+
+### Checking Support
+
+Verify if your system supports platform profiles:
+
+```bash
+cat /sys/firmware/acpi/platform_profile_choices
+```
+
+Common profiles include:
+- `performance` - Maximum performance
+- `balanced` - Balanced performance and efficiency
+- `balanced-performance` - Slight performance preference
+- `low-power` - Maximum power saving
+- `quiet` - Reduced fan noise
+- `cool` - Prioritize cooling
+
+### Configuration
+
+Set platform profiles in the config file:
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+platform_profile = performance
+
+[battery]
+platform_profile = low-power
+```
+
+<Note>
+If platform profiles are not supported by your system, auto-cpufreq will skip this setting with a warning message.
+</Note>
+
+### When to Use Platform Profiles
+
+- **Integrated approach**: Platform profiles control more than just CPU
+- **Laptop-wide optimization**: Affects fans, GPU, and other components
+- **Firmware coordination**: Works with manufacturer optimizations
+
+[Official kernel documentation →](https://www.kernel.org/doc/html/latest/userspace-api/sysfs-platform_profile.html)
+
+## Energy Performance Preference (EPP)
+
+EPP provides hardware guidance about the desired performance/efficiency trade-off for modern Intel and AMD CPUs.
+
+### What is EPP?
+
+Energy Performance Preference is a hardware-level hint that tells the CPU how to balance performance and power consumption. It's supported by:
+
+- **Intel**: CPUs with `intel_pstate` driver in "active" mode (HWP enabled)
+- **AMD**: CPUs with `amd-pstate` driver in "active" mode
+
+<Info>
+EPP works at the hardware level and allows the CPU to make intelligent power/performance decisions autonomously.
+</Info>
+
+### Available EPP Values
+
+Check available preferences on your system:
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences
+```
+
+Common values:
+- `performance` - Maximum performance, highest power usage
+- `balance_performance` - Favor performance, moderate power usage
+- `default` / `balance_power` - Balanced approach
+- `power` - Maximum power efficiency, lower performance
+
+### Configuration
+
+Set EPP in the config file:
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+energy_performance_preference = performance
+
+[battery]
+energy_performance_preference = power
+```
+
+### Default EPP Values
+
+When EPP is supported but not configured:
+
+**For Charger (AC Power):**
+- With performance governor: `performance`
+- With other governors: `balance_performance`
+
+**For Battery:**
+- Uses `balance_power` if not specified
+
+### EPP Limitations
+
+<Warning>
+EPP is **not available** in the following situations:
+- System doesn't support EPP (older CPUs)
+- Using passive mode drivers (acpi-cpufreq)
+- Intel Dynamic Boost is enabled
+- Using performance governor with intel_pstate (forces "performance" EPP)
+</Warning>
+
+## Energy Performance Bias (EPB)
+
+EPB is an older Intel-specific interface for setting CPU power/performance preferences.
+
+### What is EPB?
+
+Energy Performance Bias provides performance/efficiency hints to Intel CPUs. It's used by:
+
+- **Intel CPUs** with `intel_pstate` driver
+- **Older systems** that don't support EPP
+- **Additional tuning** on systems that support both EPP and EPB
+
+### Available EPB Values
+
+EPB accepts either numeric values or string names:
+
+#### Numeric Values (0-15)
+
+```ini
+energy_perf_bias = 0   # Maximum performance
+energy_perf_bias = 4   # Balance performance
+energy_perf_bias = 6   # Default
+energy_perf_bias = 8   # Balance power
+energy_perf_bias = 15  # Maximum power saving
+```
+
+- `0` = maximum performance
+- `15` = maximum power saving
+- Values in between offer graduated trade-offs
+
+#### String Values
+
+```ini
+energy_perf_bias = performance          # Equivalent to 0
+energy_perf_bias = balance_performance  # Equivalent to 4
+energy_perf_bias = default              # Equivalent to 6  
+energy_perf_bias = balance_power        # Equivalent to 8
+energy_perf_bias = power                # Equivalent to 15
+```
+
+<Info>
+String values are recommended for better readability and maintainability.
+</Info>
+
+### Configuration
+
+Set EPB in the config file:
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+energy_perf_bias = balance_performance
+
+[battery]
+energy_perf_bias = balance_power
+```
+
+### Default EPB Values
+
+When EPB is supported but not configured:
+- **Charger**: `balance_performance` (4)
+- **Battery**: `balance_power` (8)
+
+[Official kernel documentation →](https://www.kernel.org/doc/html/latest/admin-guide/pm/intel_epb.html)
+
+## GNOME Power Profiles Daemon Conflict
+
+<Warning>
+The GNOME Power Profiles daemon conflicts with auto-cpufreq and must be disabled.
+</Warning>
+
+### Why There's a Conflict
+
+Both GNOME Power Profiles daemon and auto-cpufreq attempt to manage:
+- CPU frequency governors
+- Platform profiles
+- Energy performance preferences
+
+Running both simultaneously causes:
+- **Performance issues**: Conflicting settings
+- **Unpredictable behavior**: Services fighting for control
+- **Overheating**: Incorrect governor/profile combinations
+
+### Automatic Disabling
+
+When installing via [auto-cpufreq-installer](/installation/auto-installer), the GNOME Power Profiles daemon is automatically disabled.
+
+### Manual Disabling
+
+<Tabs>
+  <Tab title="Standard Install">
+    ```bash
+    # Mask the service to prevent it from starting
+    sudo systemctl mask power-profiles-daemon.service
+    
+    # Stop if currently running
+    sudo systemctl stop power-profiles-daemon.service
+    ```
+  </Tab>
+  <Tab title="AUR Install">
+    ```bash
+    # AUR packages don't automatically disable it
+    sudo systemctl mask power-profiles-daemon.service
+    sudo systemctl stop power-profiles-daemon.service
+    
+    # Then enable auto-cpufreq if not already
+    sudo systemctl enable --now auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="Snap Install">
+    For Snap installations, use the `power_helper.py` script:
+    
+    ```bash
+    # Clone the repo to access the script
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    
+    # Install dependencies
+    sudo apt install python3-psutil python3-pyinotify
+    
+    # Disable GNOME Power Profiles daemon
+    sudo python3 -m auto_cpufreq.power_helper --gnome_power_disable
+    ```
+  </Tab>
+</Tabs>
+
+### Verifying It's Disabled
+
+```bash
+sudo systemctl status power-profiles-daemon.service
+```
+
+You should see:
+```
+● power-profiles-daemon.service
+   Loaded: masked (Reason: Unit power-profiles-daemon.service is masked.)
+   Active: inactive (dead)
+```
+
+## TuneD Daemon Conflict
+
+<Warning>
+The TuneD daemon (enabled by default on Fedora 41+) also conflicts with auto-cpufreq.
+</Warning>
+
+TuneD is automatically disabled by auto-cpufreq-installer, but for manual installations:
+
+```bash
+sudo systemctl mask tuned.service
+sudo systemctl stop tuned.service
+```
+
+## Checking Current Settings
+
+### Platform Profile
+
+```bash
+cat /sys/firmware/acpi/platform_profile
+```
+
+### EPP (Energy Performance Preference)
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference
+```
+
+### EPB (Energy Performance Bias)
+
+```bash
+# Using x86_energy_perf_policy tool
+x86_energy_perf_policy -r
+
+# Or via cpupower
+cpupower info
+```
+
+## Complete Configuration Example
+
+Here's a complete configuration using all power profile options:
+
+```ini /etc/auto-cpufreq.conf
+# Settings for when connected to a power source
+[charger]
+governor = performance
+
+# EPP: Intel/AMD modern CPUs
+energy_performance_preference = performance
+
+# EPB: Intel CPUs
+energy_perf_bias = balance_performance
+
+# Platform Profile: System-wide power management
+platform_profile = performance
+
+turbo = auto
+
+# Settings for when using battery power
+[battery]
+governor = powersave
+
+# EPP: Intel/AMD modern CPUs  
+energy_performance_preference = power
+
+# EPB: Intel CPUs
+energy_perf_bias = balance_power
+
+# Platform Profile: System-wide power management
+platform_profile = low-power
+
+turbo = auto
+```
+
+<Note>
+You don't need to configure all options. auto-cpufreq will use sensible defaults for any options you don't specify.
+</Note>
+
+## Choosing the Right Settings
+
+### For Maximum Performance
+
+```ini
+[charger]
+governor = performance
+energy_performance_preference = performance
+energy_perf_bias = performance
+platform_profile = performance
+turbo = always
+```
+
+### For Maximum Battery Life
+
+```ini
+[battery]
+governor = powersave
+energy_performance_preference = power
+energy_perf_bias = power
+platform_profile = low-power
+turbo = never
+```
+
+### For Balanced (Recommended)
+
+```ini
+[charger]
+governor = performance
+energy_performance_preference = balance_performance
+platform_profile = balanced-performance
+turbo = auto
+
+[battery]
+governor = powersave
+energy_performance_preference = balance_power
+platform_profile = low-power
+turbo = auto
+```
+
+## Troubleshooting
+
+### EPP Not Working
+
+If EPP is not being set:
+
+1. **Check driver mode**:
+   ```bash
+   cat /sys/devices/system/cpu/intel_pstate/status
+   cat /sys/devices/system/cpu/amd_pstate/status
+   ```
+   
+   Must show "active" for EPP to work.
+
+2. **Check HWP support** (Intel):
+   ```bash
+   grep -i hwp /proc/cpuinfo
+   ```
+
+3. **Check for dynamic boost** (Intel):
+   ```bash
+   cat /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost
+   ```
+   
+   If this is "1", EPP is disabled.
+
+### EPB Not Working
+
+1. **Check if intel_pstate driver is active**:
+   ```bash
+   cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+   ```
+
+2. **Verify EPB support**:
+   ```bash
+   grep -i epb /proc/cpuinfo
+   ```
+
+### Platform Profile Not Working
+
+1. **Check if platform_profile exists**:
+   ```bash
+   ls -l /sys/firmware/acpi/platform_profile
+   ```
+
+2. **Check available profiles**:
+   ```bash
+   cat /sys/firmware/acpi/platform_profile_choices
+   ```
+
+3. **Verify no other service is controlling it**:
+   ```bash
+   sudo systemctl status power-profiles-daemon
+   ```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration File" icon="file-lines" href="/configuration/config-file">
+    Complete configuration file reference
+  </Card>
+  <Card title="Governor Override" icon="gauge-high" href="/configuration/governor-override">
+    Force specific CPU governors
+  </Card>
+  <Card title="Turbo Override" icon="rocket" href="/configuration/turbo-override">
+    Control turbo boost behavior
+  </Card>
+  <Card title="Installation" icon="download" href="/installation/auto-installer">
+    Install auto-cpufreq properly
+  </Card>
+</CardGroup>

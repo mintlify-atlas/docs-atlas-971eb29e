@@ -1,0 +1,391 @@
+---
+title: Battery Charging Thresholds
+description: Configure battery charging thresholds to preserve battery health on supported devices
+---
+
+<Info>
+Battery charging thresholds are available starting from [v2.2.0](https://github.com/AdnanHodzic/auto-cpufreq/releases/tag/v2.2.0). This is an experimental feature that may require user testing and feedback.
+</Info>
+
+Battery charging thresholds enforce your battery to start and stop charging at defined values, which can significantly extend battery lifespan by reducing wear from constant full charges.
+
+## How It Works
+
+Lithium-ion batteries last longer when kept between 20-80% charge rather than constantly charging to 100%. By setting thresholds:
+
+- **Start threshold**: Battery begins charging when it drops below this percentage
+- **Stop threshold**: Battery stops charging when it reaches this percentage
+
+<Note>
+Keeping your battery between 20-80% can extend its lifespan by 2-3x compared to always charging to 100%.
+</Note>
+
+## Supported Devices
+
+auto-cpufreq supports battery thresholds on the following device types:
+
+<CardGroup cols={2}>
+  <Card title="Lenovo ThinkPad" icon="laptop">
+    Requires `thinkpad_acpi` kernel module
+  </Card>
+  <Card title="Lenovo IdeaPad" icon="laptop">
+    Requires `ideapad_acpi` or `ideapad_laptop` module
+  </Card>
+  <Card title="Lenovo Laptop" icon="laptop">
+    Requires `ideapad_laptop` kernel module
+  </Card>
+  <Card title="ASUS Laptops" icon="laptop">
+    Requires `asus_wmi` kernel module
+  </Card>
+</CardGroup>
+
+<Warning>
+Your laptop **must have the appropriate ACPI kernel driver** installed and loaded for battery thresholds to work.
+</Warning>
+
+### Checking Module Support
+
+Verify if your system has the required kernel module:
+
+```bash
+# For ThinkPad
+lsmod | grep thinkpad_acpi
+
+# For IdeaPad
+lsmod | grep ideapad_acpi
+lsmod | grep ideapad_laptop
+
+# For ASUS
+lsmod | grep asus_wmi
+```
+
+If the module is loaded, you'll see output. If not, the module either isn't available or isn't loaded.
+
+### Requesting Device Support
+
+If your device is not currently supported:
+
+1. Open an [issue on GitHub](https://github.com/AdnanHodzic/auto-cpufreq/issues/new)
+2. Specify your laptop model and manufacturer
+3. Identify the ACPI driver that works with your laptop
+4. Provide output from:
+   ```bash
+   ls /sys/class/power_supply/BAT*/charge_*threshold 2>/dev/null
+   ```
+
+## Configuration
+
+### Basic Configuration
+
+Edit the auto-cpufreq configuration file:
+
+```ini /etc/auto-cpufreq.conf
+[battery]
+# Enable battery charging thresholds
+enable_thresholds = true
+
+# Battery starts charging when it drops below this percentage
+start_threshold = 20
+
+# Battery stops charging when it reaches this percentage
+stop_threshold = 80
+```
+
+<Info>
+You must specify **both** `start_threshold` and `stop_threshold` for most devices.
+</Info>
+
+### Threshold Ranges
+
+- **start_threshold**: `0` to `99` (0 = disabled on some models)
+- **stop_threshold**: `1` to `100` (100 = disabled on some models)
+- **Constraint**: `start_threshold` must be less than `stop_threshold`
+
+### Recommended Values
+
+<Tabs>
+  <Tab title="Balanced">
+    ```ini
+    start_threshold = 20
+    stop_threshold = 80
+    ```
+    Good balance between battery health and usable capacity.
+  </Tab>
+  <Tab title="Maximum Longevity">
+    ```ini
+    start_threshold = 40
+    stop_threshold = 60
+    ```
+    Best for battery lifespan, but reduced available capacity.
+  </Tab>
+  <Tab title="High Capacity">
+    ```ini
+    start_threshold = 50
+    stop_threshold = 90
+    ```
+    More usable capacity while still protecting battery.
+  </Tab>
+</Tabs>
+
+## Applying Configuration
+
+After editing the config file, restart the auto-cpufreq daemon:
+
+```bash
+sudo systemctl restart auto-cpufreq.service
+```
+
+<Note>
+The daemon checks and applies battery thresholds every hour automatically.
+</Note>
+
+## IdeaPad Conservation Mode
+
+Lenovo IdeaPad laptops with the `ideapad_laptop` module support a special **conservation mode** that limits charging to around 60-80% (varies by model).
+
+### Enabling Conservation Mode
+
+```ini /etc/auto-cpufreq.conf
+[battery]
+ideapad_laptop_conservation_mode = true
+```
+
+<Info>
+Conservation mode is a simple on/off setting that limits maximum charge automatically. It does not use start/stop thresholds.
+</Info>
+
+### When to Use Conservation Mode
+
+- **Mostly plugged in**: Desktop replacement laptops
+- **Rarely mobile**: Systems that stay connected to AC power
+- **Maximum battery health**: When you prioritize longevity over capacity
+
+<Warning>
+Do not use conservation mode if you regularly need full battery capacity for mobile work.
+</Warning>
+
+## Device-Specific Details
+
+### ThinkPad (thinkpad_acpi)
+
+ThinkPads support full threshold control:
+
+```ini
+[battery]
+enable_thresholds = true
+start_threshold = 20  # Battery starts charging at 20%
+stop_threshold = 80   # Battery stops charging at 80%
+```
+
+Threshold files:
+- `/sys/class/power_supply/BAT0/charge_start_threshold`
+- `/sys/class/power_supply/BAT0/charge_stop_threshold`
+
+Or newer kernels:
+- `/sys/class/power_supply/BAT0/charge_control_start_threshold`
+- `/sys/class/power_supply/BAT0/charge_control_end_threshold`
+
+[Official kernel documentation →](https://docs.kernel.org/admin-guide/laptops/thinkpad-acpi.html#battery-charge-control)
+
+### IdeaPad (ideapad_acpi)
+
+IdeaPad with ideapad_acpi supports standard thresholds:
+
+```ini
+[battery]
+enable_thresholds = true
+start_threshold = 20
+stop_threshold = 80
+```
+
+### IdeaPad (ideapad_laptop)
+
+IdeaPad with ideapad_laptop only supports conservation mode:
+
+```ini
+[battery]
+ideapad_laptop_conservation_mode = true
+```
+
+Conservation mode file:
+- `/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode`
+
+### ASUS (asus_wmi)
+
+ASUS laptops support standard thresholds:
+
+```ini
+[battery]
+enable_thresholds = true
+start_threshold = 20
+stop_threshold = 80
+```
+
+## Checking Current Thresholds
+
+View current battery threshold settings:
+
+```bash
+sudo auto-cpufreq --stats
+```
+
+Look for the "Battery Info" section showing current thresholds.
+
+Or check manually:
+
+```bash
+# For most devices
+cat /sys/class/power_supply/BAT0/charge_start_threshold
+cat /sys/class/power_supply/BAT0/charge_stop_threshold
+
+# For IdeaPad conservation mode
+cat /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode
+```
+
+## Important Considerations
+
+### Persistence After Removal
+
+<Warning>
+When you remove/uninstall the auto-cpufreq daemon, the **last applied battery thresholds will remain active**. You must manually reset them to defaults.
+</Warning>
+
+Reset thresholds to factory defaults:
+
+```bash
+# Run as root
+echo 0 > /sys/class/power_supply/BAT0/charge_start_threshold
+echo 100 > /sys/class/power_supply/BAT0/charge_stop_threshold
+```
+
+### Conflicting Software
+
+<Warning>
+Make sure you have **no other software** managing battery thresholds, as conflicts will prevent proper charging behavior.
+</Warning>
+
+Conflicting services include:
+- GNOME "Preserve Battery Health" option
+- TLP battery threshold settings
+- laptop-mode-tools battery management
+- System76 Power battery charging limits
+
+Disable competing services before enabling auto-cpufreq thresholds.
+
+### Multiple Batteries
+
+For laptops with multiple batteries (e.g., BAT0 and BAT1), auto-cpufreq automatically applies thresholds to all detected batteries.
+
+Check available batteries:
+
+```bash
+ls /sys/class/power_supply/
+```
+
+## Complete Example
+
+Here's a complete configuration with battery thresholds:
+
+```ini /etc/auto-cpufreq.conf
+# Charger settings
+[charger]
+governor = performance
+energy_performance_preference = performance
+turbo = auto
+
+# Battery settings
+[battery]
+governor = powersave
+energy_performance_preference = power
+turbo = auto
+
+# Battery charging thresholds
+enable_thresholds = true
+start_threshold = 20
+stop_threshold = 80
+
+# For IdeaPad with ideapad_laptop module, use this instead:
+# ideapad_laptop_conservation_mode = true
+```
+
+After saving:
+
+```bash
+sudo systemctl restart auto-cpufreq.service
+```
+
+## Troubleshooting
+
+### Thresholds Not Applied
+
+1. **Check module is loaded**:
+   ```bash
+   lsmod | grep -E 'thinkpad|ideapad|asus_wmi'
+   ```
+
+2. **Verify threshold files exist**:
+   ```bash
+   ls -l /sys/class/power_supply/BAT*/charge_*threshold
+   ```
+
+3. **Check daemon logs**:
+   ```bash
+   sudo journalctl -u auto-cpufreq -n 50
+   ```
+
+4. **Test manual write**:
+   ```bash
+   echo 80 | sudo tee /sys/class/power_supply/BAT0/charge_stop_threshold
+   ```
+
+### Battery Not Charging Past Threshold
+
+This is expected behavior! The threshold is working correctly. To charge beyond the threshold:
+
+1. Temporarily disable thresholds:
+   ```ini
+   enable_thresholds = false
+   ```
+
+2. Restart daemon:
+   ```bash
+   sudo systemctl restart auto-cpufreq.service
+   ```
+
+3. Charge to desired level
+
+4. Re-enable thresholds
+
+### Conflicting Software Detected
+
+If you're using GNOME with "Preserve Battery Health":
+
+```bash
+# Disable GNOME battery charge limiting
+gsettings set org.gnome.settings-daemon.plugins.power battery-charge-threshold 100
+```
+
+If you're using TLP:
+
+```bash
+# Remove TLP battery threshold settings from /etc/tlp.conf
+# Or disable TLP entirely (recommended)
+sudo systemctl disable --now tlp
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration File" icon="file-lines" href="/configuration/config-file">
+    Complete configuration file reference
+  </Card>
+  <Card title="Daemon Mode" icon="server" href="/usage/daemon-mode">
+    Install and run auto-cpufreq as a service
+  </Card>
+  <Card title="Power Profiles" icon="bolt" href="/configuration/power-profiles">
+    Configure power management profiles
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/AdnanHodzic/auto-cpufreq/issues">
+    Request support for your device
+  </Card>
+</CardGroup>

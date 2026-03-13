@@ -1,0 +1,299 @@
+---
+title: Frequency Scaling
+description: Set custom CPU frequency limits for fine-grained performance control
+---
+
+## Overview
+
+Frequency scaling allows you to set custom minimum and maximum CPU frequency limits. This gives you precise control over your CPU's operating range, enabling you to:
+
+- Limit maximum frequency to reduce heat and power consumption
+- Set minimum frequency to ensure responsive performance
+- Create custom power profiles for specific workloads
+- Extend battery life by capping maximum frequencies
+
+<Warning>
+Setting frequency limits incorrectly can impact system performance or stability. Make sure you understand your CPU's specifications before applying custom limits.
+</Warning>
+
+## Configuration Options
+
+### scaling_min_freq
+
+Sets the minimum CPU frequency in **kilohertz (kHz)**. The CPU will not scale below this frequency.
+
+**Use cases**:
+- Ensure responsive performance for latency-sensitive applications
+- Prevent CPU from dropping to very low frequencies that cause lag
+- Maintain consistent baseline performance
+
+### scaling_max_freq
+
+Sets the maximum CPU frequency in **kilohertz (kHz)**. The CPU will not exceed this frequency.
+
+**Use cases**:
+- Reduce heat generation during extended workloads
+- Limit power consumption to extend battery life
+- Prevent thermal throttling on systems with cooling limitations
+- Create a "quiet mode" with lower maximum frequencies
+
+## Configuration Syntax
+
+Add frequency limits to your auto-cpufreq configuration file. You can set different limits for battery and charger modes.
+
+### Configuration File Location
+
+- System-wide: `/etc/auto-cpufreq.conf`
+- User-specific: `$XDG_CONFIG_HOME/auto-cpufreq/auto-cpufreq.conf`
+- Custom path: Use `--config <FILE>` flag
+
+### Basic Example
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+governor = performance
+# Set max frequency to 3.5 GHz (3500 MHz = 3500000 kHz)
+scaling_max_freq = 3500000
+# Set min frequency to 1.2 GHz (1200 MHz = 1200000 kHz)
+scaling_min_freq = 1200000
+
+[battery]
+governor = powersave
+# Cap at 2 GHz on battery to save power
+scaling_max_freq = 2000000
+# Allow CPU to scale down to 800 MHz
+scaling_min_freq = 800000
+```
+
+## Frequency Conversion
+
+CPU frequencies must be specified in **kilohertz (kHz)**. Use these conversions:
+
+<CardGroup cols={2}>
+  <Card title="MHz to kHz" icon="arrow-right">
+    Multiply by 1,000
+    
+    **Example**: 800 MHz = 800,000 kHz
+  </Card>
+  <Card title="GHz to kHz" icon="arrow-right">
+    Multiply by 1,000,000
+    
+    **Example**: 2.5 GHz = 2,500,000 kHz
+  </Card>
+</CardGroup>
+
+### Common Frequency Values
+
+| Frequency | kHz Value |
+|-----------|----------|
+| 800 MHz | 800000 |
+| 1 GHz | 1000000 |
+| 1.2 GHz | 1200000 |
+| 1.5 GHz | 1500000 |
+| 2 GHz | 2000000 |
+| 2.5 GHz | 2500000 |
+| 3 GHz | 3000000 |
+| 3.5 GHz | 3500000 |
+| 4 GHz | 4000000 |
+
+<Info>
+For precise conversions, you can use online tools:
+- [RapidTables MHz to Hz Converter](https://www.rapidtables.com/convert/frequency/mhz-to-hz.html)
+</Info>
+
+## Use Cases
+
+### Battery Life Optimization
+
+**Goal**: Maximize battery runtime by limiting CPU frequencies
+
+```ini
+[battery]
+governor = powersave
+platform_profile = low-power
+# Cap maximum frequency at 2 GHz
+scaling_max_freq = 2000000
+# Allow scaling down to 800 MHz
+scaling_min_freq = 800000
+turbo = never
+```
+
+### Thermal Management
+
+**Goal**: Reduce heat generation on systems with inadequate cooling
+
+```ini
+[charger]
+governor = performance
+# Limit max frequency to prevent overheating
+scaling_max_freq = 2800000
+turbo = never
+```
+
+### Performance Consistency
+
+**Goal**: Maintain consistent performance by preventing low-frequency scaling
+
+```ini
+[charger]
+governor = performance
+# Prevent CPU from dropping below 1.5 GHz
+scaling_min_freq = 1500000
+scaling_max_freq = 4000000
+turbo = auto
+```
+
+### Quiet Mode
+
+**Goal**: Minimize fan noise during presentations or quiet environments
+
+```ini
+[charger]
+governor = powersave
+platform_profile = quiet
+# Keep frequencies moderate to reduce fan speed
+scaling_max_freq = 2000000
+scaling_min_freq = 1000000
+turbo = never
+```
+
+## Finding Your CPU's Frequency Range
+
+Before setting custom limits, you need to know your CPU's supported frequency range.
+
+### Check Available Frequencies
+
+```bash
+# View available governors
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+
+# Check current minimum frequency
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+
+# Check current maximum frequency
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+
+# Check hardware limits
+cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq
+cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq
+```
+
+### Using lscpu
+
+```bash
+lscpu | grep MHz
+```
+
+Example output:
+```
+CPU MHz:                         1200.000
+CPU max MHz:                     3500.0000
+CPU min MHz:                     800.0000
+```
+
+<Note>
+Your configured frequencies must fall within your CPU's hardware limits. auto-cpufreq will exit with an error if you specify frequencies outside the allowed range.
+</Note>
+
+## How It Works
+
+1. **Configuration Loading**: auto-cpufreq reads your configuration file when starting or when power state changes
+
+2. **Validation**: It checks that your specified frequencies are within hardware limits:
+   ```
+   hardware_min ≤ scaling_min_freq ≤ scaling_max_freq ≤ hardware_max
+   ```
+
+3. **Application**: Frequencies are applied using the `cpufreqctl.auto-cpufreq` utility:
+   ```bash
+   cpufreqctl.auto-cpufreq --frequency-min --set=800000
+   cpufreqctl.auto-cpufreq --frequency-max --set=2000000
+   ```
+
+4. **Persistence**: Settings are automatically reapplied when:
+   - Power state changes (battery ↔ charger)
+   - System resumes from suspend
+   - Daemon is restarted
+
+## Apply Configuration Changes
+
+After modifying frequency settings in your configuration file:
+
+```bash
+# Restart the daemon to apply changes
+sudo systemctl restart auto-cpufreq
+
+# Verify settings are applied
+auto-cpufreq --stats
+```
+
+Example stats output showing applied frequencies:
+```
+Setting minimum CPU frequency to 800 Mhz
+Setting maximum CPU frequency to 2000 Mhz
+```
+
+## Troubleshooting
+
+### Frequency Not Applied
+
+**Issue**: Your configured frequency isn't being applied
+
+**Solutions**:
+1. Check that frequencies are in kHz (not MHz or GHz)
+2. Verify frequencies are within hardware limits
+3. Ensure configuration file syntax is correct (no comments on the same line as values)
+
+### "Invalid value" Error
+
+**Issue**: `Invalid value for 'scaling_max_freq': ...`
+
+**Cause**: The value isn't a valid integer
+
+**Solution**: Make sure you're using numbers only (no units):
+```ini
+# Correct
+scaling_max_freq = 2000000
+
+# Incorrect
+scaling_max_freq = 2000000 kHz
+scaling_max_freq = 2.0 GHz
+```
+
+### "Not within allowed frequencies" Error
+
+**Issue**: `Given value for 'scaling_max_freq' is not within the allowed frequencies`
+
+**Cause**: Your specified frequency exceeds hardware limits
+
+**Solution**: Check your CPU's actual limits:
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq
+cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Start Conservative">
+    Begin with moderate frequency limits and adjust based on performance and temperature monitoring.
+  </Accordion>
+  
+  <Accordion title="Monitor Temperatures">
+    Use tools like `sensors` or `htop` to ensure your frequency limits keep temperatures in a safe range.
+  </Accordion>
+  
+  <Accordion title="Test Workloads">
+    After applying new limits, test your typical workloads to ensure performance is acceptable.
+  </Accordion>
+  
+  <Accordion title="Different Profiles for Different Modes">
+    Use more aggressive limits on battery, more relaxed limits when plugged in.
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+- [CPU Governors](/configuration/governor-override) - Control frequency scaling behavior
+- [Turbo Boost](/configuration/turbo-override) - Enable/disable CPU turbo frequencies
+- [Platform Profiles](/advanced/platform-profiles) - System-wide power management profiles

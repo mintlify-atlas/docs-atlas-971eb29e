@@ -1,0 +1,440 @@
+---
+title: "--debug"
+description: "Display debug information for troubleshooting"
+icon: "bug"
+---
+
+# Debug Mode
+
+The `--debug` command displays comprehensive diagnostic information about your system, CPU state, and auto-cpufreq configuration for troubleshooting purposes.
+
+## Usage
+
+```bash
+sudo auto-cpufreq --debug
+```
+
+<Note>
+Debug mode requires root privileges to access all system information.
+</Note>
+
+## What It Shows
+
+Debug mode displays:
+
+- **Distribution information** - OS name, version, kernel
+- **System information** - CPU model, cores, architecture  
+- **Python information** - Python version, psutil version
+- **Device information** - Hostname, uptime
+- **Battery information** - State, percentage, charging thresholds
+- **CPU frequency** - Current frequencies per core
+- **CPU usage** - Per-core utilization
+- **CPU temperature** - Per-core temperatures
+- **Load average** - System load (1, 5, 15 minutes)
+- **Current governor** - Active CPU governor
+- **Available governors** - All available governors
+- **CPU driver** - Active CPU frequency driver
+- **Turbo boost status** - Current turbo state
+- **Scaling information** - Min/max frequencies
+- **App resource usage** - auto-cpufreq memory and CPU usage
+- **Configuration file** - Active config (if any)
+
+## Example Output
+
+```bash
+$ sudo auto-cpufreq --debug
+
+------------------------------ auto-cpufreq -------------------------------
+
+Automatic CPU speed & power optimizer for Linux
+
+------------------------------ Distribution Info --------------------------
+
+Distribution: Ubuntu 22.04.3 LTS jammy
+Kernel: 6.2.0-39-generic
+
+------------------------------ System Info --------------------------------
+
+Processor: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Cores: 8
+Architecture: x86_64
+
+------------------------------ App Version --------------------------------
+
+auto-cpufreq version: v2.3.0
+
+------------------------------ Python Info --------------------------------
+
+Python: 3.10.12
+psutil package: 6.0.0
+distro package: 1.8.0
+
+------------------------------ Device Info --------------------------------
+
+Hostname: laptop-ubuntu
+Uptime: 5 hours, 23 minutes
+
+------------------------------ Battery ------------------------------------
+
+Charging: False  
+Battery: 67%
+Battery thresholds:
+  Start threshold: 20%
+  Stop threshold: 80%
+
+------------------------------ CPU Frequency -------------------------------
+
+CPU0: 800 MHz
+CPU1: 800 MHz
+CPU2: 1200 MHz
+CPU3: 800 MHz
+CPU4: 800 MHz
+CPU5: 1100 MHz
+CPU6: 800 MHz
+CPU7: 800 MHz
+
+------------------------------ CPU Usage ----------------------------------
+
+CPU usage: 8%
+CPU0: 5%
+CPU1: 3%
+CPU2: 15%
+CPU3: 8%
+CPU4: 6%
+CPU5: 12%
+CPU6: 4%
+CPU7: 7%
+
+------------------------------ CPU Temperature ----------------------------
+
+Average: 47°C
+Core 0: 46°C
+Core 1: 47°C
+Core 2: 48°C
+Core 3: 47°C
+
+------------------------------ Load Average -------------------------------
+
+1 minute: 0.52
+5 minutes: 0.68
+15 minutes: 0.71
+
+------------------------------ Governor -----------------------------------
+
+Current governor: powersave
+Available governors: performance powersave
+
+------------------------------ CPU Driver ---------------------------------
+
+Driver: intel_pstate
+
+------------------------------ Turbo Boost --------------------------------
+
+Turbo boost: Disabled
+
+------------------------------ Scaling ------------------------------------
+
+Scaling driver: intel_pstate
+Scaling min frequency: 400 MHz
+Scaling max frequency: 1800 MHz
+Available frequencies: Not Available
+
+------------------------------ App Resource Usage -------------------------
+
+Memory: 45.2 MB
+CPU usage: 0.8%
+```
+
+## When to Use Debug Mode
+
+<CardGroup cols={2}>
+  <Card title="Before Reporting Bugs" icon="github">
+    Include debug output when submitting GitHub issues
+  </Card>
+  <Card title="Configuration Issues" icon="gear">
+    Diagnose why settings aren't being applied
+  </Card>
+  <Card title="Performance Problems" icon="gauge">
+    Identify bottlenecks or unexpected behavior
+  </Card>
+  <Card title="Hardware Detection" icon="microchip">
+    Verify CPU, governor, and driver detection
+  </Card>
+</CardGroup>
+
+## Submitting Bug Reports
+
+When reporting issues on [GitHub](https://github.com/AdnanHodzic/auto-cpufreq/issues), include:
+
+<Steps>
+  <Step title="Run debug command">
+    ```bash
+    sudo auto-cpufreq --debug > debug-output.txt 2>&1
+    ```
+  </Step>
+  
+  <Step title="Gather daemon logs">
+    ```bash
+    sudo journalctl -u auto-cpufreq --no-pager > daemon-logs.txt
+    ```
+  </Step>
+  
+  <Step title="Include config file">
+    ```bash
+    cat /etc/auto-cpufreq.conf > config.txt 2>&1
+    ```
+  </Step>
+  
+  <Step title="Create GitHub issue">
+    1. Go to [Issues page](https://github.com/AdnanHodzic/auto-cpufreq/issues)
+    2. Click "New Issue"
+    3. Describe the problem
+    4. Attach the three files
+  </Step>
+</Steps>
+
+<Info>
+Before submitting an issue, try the [auto-cpufreq GenAI chatbot](https://foolcontrol.org/?p=4903) for instant help.
+</Info>
+
+## Debug vs Stats Mode
+
+| Feature | Debug | Stats |
+|---------|-------|-------|
+| Requires daemon | No | Yes |
+| Shows config | Yes | Yes |
+| Shows history | No | Yes |
+| Python info | Yes | No |
+| Resource usage | Yes | No |
+| Real-time updates | No | Yes |
+| Best for | Troubleshooting | Monitoring |
+
+## Understanding Debug Output
+
+### Distribution Info
+
+Shows your Linux distribution and kernel version. Useful for identifying distribution-specific issues.
+
+### System Info  
+
+Displays CPU model, core count, and architecture. Helps verify hardware detection.
+
+### App Version
+
+Shows installed auto-cpufreq version. Important for knowing if you're on the latest release.
+
+### Python Info
+
+Lists Python version and package versions. Helps diagnose dependency issues.
+
+### Battery Info
+
+- **Charging state** - AC vs battery power
+- **Battery percentage** - Current charge level
+- **Thresholds** - If battery charging thresholds are configured
+
+### CPU Information
+
+Shows current frequencies, usage, and temperatures. Use this to verify:
+- Frequencies are scaling correctly
+- Temperature sensors are detected
+- CPU usage is being monitored
+
+### Governor & Driver
+
+Displays:
+- Active governor (performance, powersave, etc.)
+- Available governors on your system
+- CPU frequency driver (intel_pstate, acpi-cpufreq, amd-pstate)
+
+### Turbo Boost
+
+Shows whether turbo is currently enabled or disabled.
+
+### Scaling Info
+
+Displays frequency limits:
+- Min frequency - Lowest CPU can go
+- Max frequency - Highest CPU can reach
+- Driver - How frequency is controlled
+
+### App Resource Usage
+
+Shows auto-cpufreq's own resource consumption. Should be minimal (< 50 MB RAM, < 2% CPU).
+
+## Additional Debug Information
+
+For more detailed debugging:
+
+### Check CPU Driver
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+```
+
+### Check Available Governors
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+```
+
+### Check Turbo Boost (Intel)
+
+```bash
+cat /sys/devices/system/cpu/intel_pstate/no_turbo
+cat /sys/devices/system/cpu/intel_pstate/turbo_pct
+```
+
+### Check Turbo Boost (AMD)
+
+```bash
+cat /sys/devices/system/cpu/cpufreq/boost
+```
+
+### Check Temperature Sensors
+
+```bash
+sensors
+```
+
+### Check Battery Thresholds
+
+```bash
+cat /sys/class/power_supply/BAT0/charge_start_threshold
+cat /sys/class/power_supply/BAT0/charge_stop_threshold
+```
+
+## Daemon Logs
+
+For daemon-specific issues, check systemd logs:
+
+```bash
+# View recent logs
+sudo journalctl -u auto-cpufreq -n 100
+
+# Follow logs in real-time
+sudo journalctl -u auto-cpufreq -f
+
+# Logs since boot
+sudo journalctl -u auto-cpufreq -b
+
+# Logs with timestamps
+sudo journalctl -u auto-cpufreq --since "1 hour ago"
+```
+
+## Common Issues Revealed by Debug
+
+<AccordionGroup>
+  <Accordion title="Wrong CPU driver detected">
+    If debug shows `intel_pstate` but you want `acpi-cpufreq`:
+    ```bash
+    # Add to GRUB_CMDLINE_LINUX_DEFAULT in /etc/default/grub
+    intel_pstate=disable
+    
+    sudo update-grub
+    sudo reboot
+    ```
+  </Accordion>
+  
+  <Accordion title="No governors available">
+    Missing governors usually means:
+    - CPU driver not loaded
+    - Incompatible CPU
+    - Kernel module missing
+    
+    Check loaded modules:
+    ```bash
+    lsmod | grep cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="Temperature not detected">
+    Install and configure sensors:
+    ```bash
+    sudo apt install lm-sensors
+    sudo sensors-detect
+    sensors
+    ```
+  </Accordion>
+  
+  <Accordion title="Battery thresholds not working">
+    Check if your device is supported:
+    ```bash
+    ls /sys/class/power_supply/BAT0/charge_*_threshold
+    ```
+    
+    If files don't exist, your device doesn't support thresholds.
+  </Accordion>
+</AccordionGroup>
+
+## Exporting Debug Output
+
+Save debug output for sharing:
+
+```bash
+# Save to file
+sudo auto-cpufreq --debug > ~/auto-cpufreq-debug.txt 2>&1
+
+# With timestamp
+sudo auto-cpufreq --debug > ~/debug-$(date +%Y%m%d-%H%M%S).txt 2>&1
+
+# Include system info
+{
+  echo "=== auto-cpufreq debug ==="
+  sudo auto-cpufreq --debug
+  echo ""
+  echo "=== Daemon status ==="
+  systemctl status auto-cpufreq
+  echo ""
+  echo "=== Daemon logs ==="  
+  sudo journalctl -u auto-cpufreq -n 50 --no-pager
+} > ~/complete-debug.txt 2>&1
+```
+
+## Privacy Considerations
+
+<Warning>
+Debug output includes:
+- Hostname
+- CPU model
+- Kernel version
+- File paths
+
+Remove sensitive information before sharing publicly.
+</Warning>
+
+## Getting Help
+
+If debug output doesn't solve your issue:
+
+<CardGroup cols={2}>
+  <Card title="AI Chatbot" icon="robot" href="https://foolcontrol.org/?p=4903">
+    Get instant help from the GenAI chatbot
+  </Card>
+  <Card title="Discord" icon="discord" href="https://discord.gg/Sjauxtj6kH">
+    Join the community Discord server
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/AdnanHodzic/auto-cpufreq/issues">
+    Report bugs with debug output
+  </Card>
+  <Card title="GitHub Discussions" icon="comments" href="https://github.com/AdnanHodzic/auto-cpufreq/discussions">
+    Ask questions and share experiences
+  </Card>
+</CardGroup>
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    View live daemon statistics
+  </Card>
+  <Card title="Monitor" icon="eye" href="/commands/monitor">
+    Preview optimization suggestions
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting/common-issues">
+    Common issues and solutions
+  </Card>
+  <Card title="Config File" icon="file-lines" href="/configuration/config-file">
+    Configuration file reference
+  </Card>
+</CardGroup>

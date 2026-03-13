@@ -1,0 +1,411 @@
+---
+title: Development Installation
+description: Install auto-cpufreq in development mode for contributing or testing
+---
+
+Development mode installation is intended for developers who want to contribute to auto-cpufreq or test the latest features. This method installs auto-cpufreq in editable mode with all development dependencies.
+
+<Warning>
+  Development installation is **not recommended** for regular users. For standard installation, use the [auto-cpufreq-installer](/installation/auto-installer) instead.
+</Warning>
+
+## Prerequisites
+
+- Python 3.9 or higher
+- Git
+- Poetry (Python package manager) or pip
+- System development tools (gcc, make, etc.)
+- Required system libraries (see below)
+
+## System Dependencies
+
+Install required system packages before proceeding:
+
+<CodeGroup>
+```bash Debian/Ubuntu
+sudo apt update
+sudo apt install -y python3-dev python3-pip python3-venv git gcc \
+  libgirepository1.0-dev libcairo2-dev libgtk-3-dev dmidecode
+```
+
+```bash Fedora
+sudo dnf install -y python3-devel python3-pip git gcc cairo-devel \
+  gobject-introspection-devel gtk3-devel dmidecode
+```
+
+```bash Arch
+sudo pacman -S --needed python python-pip git base-devel gcc \
+  gobject-introspection gtk3 dmidecode
+```
+
+```bash openSUSE
+sudo zypper install -y python3-devel python3-pip git gcc \
+  gobject-introspection-devel python3-cairo-devel gtk3-devel dmidecode
+```
+</CodeGroup>
+
+## Installation Methods
+
+### Method 1: Using Poetry (Recommended)
+
+Poetry provides better dependency management and is the preferred method for development.
+
+<Steps>
+  <Step title="Install Poetry">
+    If you don't have Poetry installed:
+
+    ```bash
+    curl -sSL https://install.python-poetry.org | python3 -
+    ```
+
+    Or using pip:
+
+    ```bash
+    pip3 install poetry
+    ```
+
+    Add Poetry to your PATH (if needed):
+
+    ```bash
+    export PATH="$HOME/.local/bin:$PATH"
+    ```
+  </Step>
+
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install auto-cpufreq in development mode:
+
+    ```bash
+    poetry install
+    ```
+
+    This creates a virtual environment and installs all dependencies.
+  </Step>
+
+  <Step title="Run auto-cpufreq">
+    Run auto-cpufreq using Poetry:
+
+    ```bash
+    poetry run auto-cpufreq --help
+    ```
+  </Step>
+</Steps>
+
+### Method 2: Using pip (Editable Install)
+
+An alternative method using pip's editable install feature.
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Create virtual environment">
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+  </Step>
+
+  <Step title="Upgrade pip and install dependencies">
+    ```bash
+    pip3 install --upgrade pip setuptools wheel
+    ```
+  </Step>
+
+  <Step title="Install in editable mode">
+    ```bash
+    pip3 install -e .
+    ```
+
+    The `-e` flag installs the package in editable mode, so changes to the source code are immediately reflected.
+  </Step>
+
+  <Step title="Run auto-cpufreq">
+    ```bash
+    auto-cpufreq --help
+    ```
+  </Step>
+</Steps>
+
+## Installing with GUI Support
+
+To enable GUI development, install with the GUI extras:
+
+### Using Poetry
+
+```bash
+poetry install --extras gui
+```
+
+Run the GUI:
+
+```bash
+poetry run auto-cpufreq-gtk
+```
+
+### Using pip
+
+```bash
+pip3 install -e ".[gui]"
+```
+
+Run the GUI:
+
+```bash
+auto-cpufreq-gtk
+```
+
+## Running Tests
+
+During development, you may want to test different modes:
+
+### Monitor Mode (Safe)
+
+View what auto-cpufreq would do without making changes:
+
+```bash
+# Using Poetry
+sudo poetry run auto-cpufreq --monitor
+
+# Using pip
+sudo auto-cpufreq --monitor
+```
+
+### Live Mode (Temporary Changes)
+
+Apply changes temporarily (lost after reboot):
+
+```bash
+# Using Poetry
+sudo poetry run auto-cpufreq --live
+
+# Using pip
+sudo auto-cpufreq --live
+```
+
+### Debug Mode
+
+Run with debug output for troubleshooting:
+
+```bash
+sudo poetry run auto-cpufreq --monitor --debug
+```
+
+## Updating Dependencies
+
+Keep dependencies up to date:
+
+### Using Poetry
+
+```bash
+poetry update
+```
+
+If you encounter lock file issues:
+
+```bash
+poetry lock --no-update
+```
+
+### Using pip
+
+```bash
+pip3 install --upgrade -e .
+```
+
+## Development Workflow
+
+<Steps>
+  <Step title="Create a feature branch">
+    ```bash
+    git checkout -b feature/my-new-feature
+    ```
+  </Step>
+
+  <Step title="Make your changes">
+    Edit the source code in the `auto_cpufreq` directory.
+  </Step>
+
+  <Step title="Test your changes">
+    ```bash
+    sudo poetry run auto-cpufreq --monitor --debug
+    ```
+  </Step>
+
+  <Step title="Commit your changes">
+    ```bash
+    git add .
+    git commit -m "Add: description of changes"
+    ```
+  </Step>
+
+  <Step title="Push and create PR">
+    ```bash
+    git push origin feature/my-new-feature
+    ```
+    
+    Then create a pull request on GitHub.
+  </Step>
+</Steps>
+
+## Project Structure
+
+```
+auto-cpufreq/
+├── auto_cpufreq/           # Main package directory
+│   ├── bin/                # Entry points (main scripts)
+│   ├── core/               # Core functionality
+│   ├── gui/                # GUI components
+│   └── power_helper.py     # Power management helper
+├── scripts/                # Installation scripts
+├── images/                 # Icons and images
+├── pyproject.toml          # Poetry configuration
+├── poetry.lock             # Poetry lock file
+└── auto-cpufreq-installer  # Installation script
+```
+
+## Common Development Tasks
+
+### Running with custom config
+
+```bash
+sudo poetry run auto-cpufreq --monitor --config /path/to/config.conf
+```
+
+### Testing governor changes
+
+```bash
+# Force powersave governor
+sudo poetry run auto-cpufreq --force=powersave
+
+# Reset to auto
+sudo poetry run auto-cpufreq --force=reset
+```
+
+### Testing turbo mode
+
+```bash
+# Disable turbo
+sudo poetry run auto-cpufreq --turbo=never
+
+# Enable turbo
+sudo poetry run auto-cpufreq --turbo=always
+
+# Auto mode
+sudo poetry run auto-cpufreq --turbo=auto
+```
+
+## Troubleshooting
+
+### Poetry command not found
+
+Add Poetry to your PATH:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+
+# Add to ~/.bashrc or ~/.zshrc to make permanent
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+```
+
+### Import errors with PyGObject
+
+Ensure system libraries are installed:
+
+```bash
+# Debian/Ubuntu
+sudo apt install libgirepository1.0-dev libcairo2-dev
+
+# Arch
+sudo pacman -S gobject-introspection cairo
+```
+
+Then reinstall:
+
+```bash
+poetry install --extras gui
+```
+
+### Permission denied errors
+
+Some operations require root access:
+
+```bash
+sudo poetry run auto-cpufreq --monitor
+```
+
+### Virtual environment issues
+
+Reset the Poetry environment:
+
+```bash
+poetry env remove python
+poetry install
+```
+
+Or with pip:
+
+```bash
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -e .
+```
+
+## Uninstalling Development Version
+
+### Using Poetry
+
+```bash
+cd auto-cpufreq
+poetry env remove python
+cd ..
+rm -rf auto-cpufreq
+```
+
+### Using pip
+
+```bash
+pip3 uninstall auto-cpufreq
+rm -rf auto-cpufreq
+```
+
+## Contributing
+
+We welcome contributions! Here's how to get started:
+
+<CardGroup cols={2}>
+  <Card title="Join Discord" icon="discord" href="https://discord.gg/Sjauxtj6kH">
+    Discuss development and get help from the community
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/AdnanHodzic/auto-cpufreq/issues">
+    Find bugs to fix or features to implement
+  </Card>
+  <Card title="Pull Requests" icon="code-pull-request" href="https://github.com/AdnanHodzic/auto-cpufreq/pulls">
+    Submit your contributions
+  </Card>
+  <Card title="Discussions" icon="comments" href="https://github.com/AdnanHodzic/auto-cpufreq/discussions/312">
+    Co-maintainers wanted - help shape the future!
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Code Documentation" icon="book" href="https://github.com/AdnanHodzic/auto-cpufreq">
+    Read the source code and documentation
+  </Card>
+  <Card title="Testing Guide" icon="flask" href="/commands/monitor">
+    Learn how to test your changes
+  </Card>
+</CardGroup>

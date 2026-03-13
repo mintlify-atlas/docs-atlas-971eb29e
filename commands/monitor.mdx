@@ -1,0 +1,171 @@
+---
+title: "--monitor"
+description: "Monitor and view CPU optimization suggestions"
+icon: "eye"
+---
+
+# Monitor Mode
+
+The `--monitor` command allows you to preview what auto-cpufreq would do on your system without making any actual changes.
+
+## Usage
+
+```bash
+sudo auto-cpufreq --monitor
+```
+
+<Note>
+Monitor mode requires root privileges to read CPU information but makes no changes to your system.
+</Note>
+
+## What It Does
+
+Monitor mode displays:
+
+- **System information** - OS, kernel, distribution
+- **CPU information** - Model, architecture, core count
+- **CPU frequency** - Current frequency per core and system average
+- **CPU usage** - Per-core and system-wide utilization
+- **CPU temperature** - Per-core and average temperatures
+- **Battery state** - Charging status and percentage
+- **Governor information** - Available and current governors
+- **Scaling information** - Current CPU driver and frequency range
+- **Turbo boost status** - Whether turbo is enabled or disabled
+- **Optimization suggestions** - What auto-cpufreq would do in daemon mode
+
+## Example Output
+
+```bash
+$ sudo auto-cpufreq --monitor
+
+------------------------------ auto-cpufreq -------------------------------
+
+Automatic CPU speed & power optimizer for Linux
+
+------------------------------ System Info --------------------------------
+
+Linux distro: Ubuntu 22.04 LTS
+Linux kernel: 6.2.0-39-generic
+Processor: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Cores: 8
+Architecture: x86_64
+
+------------------------------ CPU Frequency -------------------------------
+
+CPU0: 800 MHz
+CPU1: 800 MHz  
+CPU2: 800 MHz
+CPU3: 1700 MHz
+CPU4: 800 MHz
+CPU5: 800 MHz
+CPU6: 900 MHz
+CPU7: 800 MHz
+
+------------------------------ CPU Usage ----------------------------------
+
+CPU usage: 5%
+CPU0: 2%
+CPU1: 3%
+CPU2: 8%
+CPU3: 12%
+[...]
+
+------------------------------ CPU Temperature ----------------------------
+
+Average CPU temperature: 45°C
+Core 0: 44°C
+Core 1: 45°C
+Core 2: 46°C
+Core 3: 45°C
+
+------------------------------ Battery ------------------------------------
+
+Charging: False
+Battery: 78%
+
+------------------------------ Governor -----------------------------------
+
+Available governors: performance powersave
+Current governor: powersave
+
+------------------------------ CPU Scaling --------------------------------
+
+Driver: intel_pstate
+Scaling min frequency: 400000 kHz
+Scaling max frequency: 4000000 kHz
+Available frequencies: Not Available
+
+------------------------------ Turbo Boost --------------------------------
+
+Turbo boost: Disabled
+
+------------------- Suggested CPU Optimizations (Battery) ----------------
+
+Governor: powersave
+Scaling min frequency: 400 MHz
+Scaling max frequency: 1800 MHz  
+Turbo: Disabled
+```
+
+## When to Use Monitor Mode
+
+<CardGroup cols={2}>
+  <Card title="Before Installation" icon="magnifying-glass">
+    Check what optimizations auto-cpufreq will apply before installing the daemon
+  </Card>
+  <Card title="Troubleshooting" icon="wrench">
+    Diagnose issues by seeing current CPU state and suggestions
+  </Card>
+  <Card title="Learning" icon="graduation-cap">
+    Understand how auto-cpufreq makes decisions based on system state
+  </Card>
+  <Card title="Verification" icon="check">
+    Confirm your hardware is supported and detected correctly
+  </Card>
+</CardGroup>
+
+## Using with Custom Config
+
+You can test monitor mode with a custom configuration file:
+
+```bash
+sudo auto-cpufreq --monitor --config /path/to/config.conf
+```
+
+This will show suggestions based on your custom configuration.
+
+## Exiting Monitor Mode
+
+Monitor mode runs continuously and updates the display. To exit:
+
+- Press `Ctrl+C` to stop monitoring
+
+<Info>
+Monitor mode does not make any changes to your system, so you can exit at any time without affecting CPU settings.
+</Info>
+
+## Comparison with Other Modes
+
+| Feature | Monitor | Live | Daemon |
+|---------|---------|------|--------|
+| Makes changes | No | Yes (temporary) | Yes (permanent) |
+| Requires daemon | No | No | Yes |
+| Survives reboot | N/A | No | Yes |
+| Use case | Preview | Test | Production |
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Live Mode" icon="circle-play" href="/commands/live">
+    Apply temporary optimizations for testing
+  </Card>
+  <Card title="Install Daemon" icon="download" href="/commands/install">
+    Install for permanent optimizations
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    View statistics from running daemon
+  </Card>
+  <Card title="Debug" icon="bug" href="/commands/debug">
+    Get detailed debug information
+  </Card>
+</CardGroup>

@@ -1,0 +1,335 @@
+---
+title: Debug Mode
+description: Using debug mode to diagnose issues and report bugs
+---
+
+Debug mode provides detailed information about your system and auto-cpufreq's operation, which is essential for troubleshooting issues.
+
+## Using the --debug Flag
+
+The `--debug` flag outputs comprehensive system information that helps diagnose problems with auto-cpufreq.
+
+### Basic Usage
+
+```bash
+auto-cpufreq --debug
+```
+
+This command displays:
+
+- System information (OS, kernel, architecture)
+- CPU information (model, cores, threads)
+- Current CPU frequency driver and governor
+- Available CPU governors
+- Current CPU frequencies (per core)
+- CPU usage statistics (per core)
+- CPU temperature readings (per core)
+- Battery state and power supply information
+- Current auto-cpufreq configuration
+- Turbo boost status
+- System load averages
+
+### Saving Debug Output
+
+For bug reports, save the debug output to a file:
+
+```bash
+auto-cpufreq --debug > auto-cpufreq-debug.txt 2>&1
+```
+
+This creates a text file with all debug information that you can attach to issue reports.
+
+## What Debug Output Shows
+
+Debug mode provides insights into various system components:
+
+### CPU Driver Information
+
+```
+CPU Driver: intel_pstate
+Available Governors: performance powersave
+Current Governor: powersave
+```
+
+This helps identify if you're using the correct driver for auto-cpufreq (ideally `acpi-cpufreq`).
+
+<Note>
+If you see `intel_pstate` or `amd-pstate`, consider switching to `acpi-cpufreq`. See [Driver Conflicts](/troubleshooting/driver-conflicts) for instructions.
+</Note>
+
+### Frequency Scaling
+
+```
+CPU Frequency Scaling:
+Core 0: 1200 MHz
+Core 1: 1400 MHz
+Core 2: 1200 MHz
+Core 3: 1350 MHz
+```
+
+This shows current operating frequencies and helps identify if scaling is working properly.
+
+### Temperature Monitoring
+
+```
+CPU Temperature:
+Average: 55°C
+Core 0: 54°C
+Core 1: 56°C
+Core 2: 55°C
+Core 3: 57°C
+```
+
+Helps diagnose overheating issues.
+
+### Battery State
+
+```
+Battery State: Discharging
+Battery Percentage: 67%
+Power Supply: BAT0
+```
+
+Shows if auto-cpufreq is correctly detecting power state for profile switching.
+
+### Turbo Boost Status
+
+```
+Turbo Boost: Enabled
+```
+
+Indicates whether turbo mode is currently active.
+
+## Debug Mode vs. Stats Mode
+
+It's important to understand the difference between debug mode and stats mode:
+
+| Mode | Command | Purpose |
+|------|---------|----------|
+| **Debug** | `auto-cpufreq --debug` | Shows detailed system information and configuration for troubleshooting |
+| **Stats** | `auto-cpufreq --stats` | Shows live statistics of daemon operations (only works when daemon is installed) |
+
+<Info>
+Use `--debug` for troubleshooting. Use `--stats` to monitor the daemon's ongoing operations.
+</Info>
+
+## Using Stats Mode
+
+If the daemon is installed and running, use stats mode to see live optimization data:
+
+```bash
+auto-cpufreq --stats
+```
+
+Stats mode shows:
+- Real-time frequency changes
+- Governor switches
+- Turbo mode toggles
+- Power state transitions
+- Historical optimization data
+
+## Submitting Bug Reports
+
+When reporting issues, always include debug output to help maintainers diagnose the problem quickly.
+
+### Before Submitting
+
+<Warning>
+Before submitting an issue, try the [auto-cpufreq-genAI-chatbot](https://foolcontrol.org/?p=4903) to get immediate answers.
+</Warning>
+
+Also check:
+1. [Existing and closed issues](https://github.com/AdnanHodzic/auto-cpufreq/issues)
+2. [Troubleshooting section](/troubleshooting/common-issues)
+3. [Configuration documentation](/configuration/config-file)
+
+### What to Include in Bug Reports
+
+A good bug report should contain:
+
+1. **Clear description** of the problem
+2. **Expected behavior** vs. actual behavior
+3. **Debug output**:
+   ```bash
+   auto-cpufreq --debug
+   ```
+4. **Error messages** (if any)
+5. **Steps to reproduce** the issue
+6. **Your configuration file** (if using custom config)
+7. **Installation method** (installer, Snap, AUR, etc.)
+
+### Example Bug Report Template
+
+```markdown
+## Description
+[Describe the issue clearly]
+
+## Expected Behavior
+[What you expected to happen]
+
+## Actual Behavior
+[What actually happened]
+
+## Steps to Reproduce
+1. [First step]
+2. [Second step]
+3. [And so on...]
+
+## System Information
+```
+[Paste output of: auto-cpufreq --debug]
+```
+
+## Error Output
+```
+[Paste any error messages]
+```
+
+## Configuration
+[Include your config file if using one]
+
+## Installation Method
+- [ ] auto-cpufreq-installer
+- [ ] Snap
+- [ ] AUR
+- [ ] Other: [specify]
+```
+
+## Creating Detailed Bug Reports
+
+### Gather All Relevant Information
+
+1. **Run debug mode**:
+   ```bash
+   auto-cpufreq --debug > debug-output.txt 2>&1
+   ```
+
+2. **Check daemon status** (if installed):
+   ```bash
+   systemctl status auto-cpufreq > daemon-status.txt 2>&1
+   ```
+   
+   For Snap:
+   ```bash
+   systemctl status snap.auto-cpufreq.service.service > daemon-status.txt 2>&1
+   ```
+
+3. **Include your configuration** (if using custom config):
+   ```bash
+   cat /etc/auto-cpufreq.conf > my-config.txt
+   ```
+
+4. **Check for conflicting services**:
+   ```bash
+   systemctl status tlp power-profiles-daemon tuned > conflicts-check.txt 2>&1
+   ```
+
+### Attach Files to Issue
+
+When creating the GitHub issue, attach:
+- `debug-output.txt`
+- `daemon-status.txt` (if daemon is installed)
+- `my-config.txt` (if using custom configuration)
+- `conflicts-check.txt` (to rule out conflicts)
+
+## Interactive Troubleshooting
+
+For real-time help and interactive troubleshooting:
+
+<CardGroup cols={2}>
+  <Card title="AI Chatbot" icon="robot" href="https://foolcontrol.org/?p=4903">
+    Get instant answers from the auto-cpufreq AI chatbot
+  </Card>
+  <Card title="Discord Server" icon="discord" href="https://discord.gg/Sjauxtj6kH">
+    Join the community for real-time support
+  </Card>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/AdnanHodzic/auto-cpufreq/issues">
+    Search existing issues or submit a new one
+  </Card>
+  <Card title="GitHub Discussions" icon="comments" href="https://github.com/AdnanHodzic/auto-cpufreq/discussions">
+    Ask questions and discuss with the community
+  </Card>
+</CardGroup>
+
+## Common Debug Patterns
+
+Certain patterns in debug output indicate specific issues:
+
+### Driver Issues
+
+If you see:
+```
+CPU Driver: intel_pstate
+```
+or
+```
+CPU Driver: amd-pstate
+```
+
+And experiencing problems → See [Driver Conflicts](/troubleshooting/driver-conflicts)
+
+### Conflicting Services
+
+If debug output shows multiple power management services active → See [Common Issues](/troubleshooting/common-issues#checking-for-conflicting-services)
+
+### Temperature Problems
+
+If temperatures are consistently high → Check:
+- Thermal paste application
+- Dust buildup
+- Conflicting services
+- Consider installing thermald
+
+### Scaling Issues
+
+If all cores show the same frequency and aren't changing → Check:
+- CPU driver (should be `acpi-cpufreq`)
+- Daemon is running
+- No conflicting services
+
+## Advanced Debugging
+
+For advanced users who need more detailed logging:
+
+### Check System Logs
+
+```bash
+# View auto-cpufreq daemon logs
+journalctl -u auto-cpufreq -n 100 --no-pager
+
+# Follow logs in real-time
+journalctl -u auto-cpufreq -f
+```
+
+For Snap installations:
+```bash
+journalctl -u snap.auto-cpufreq.service.service -n 100 --no-pager
+```
+
+### Monitor in Real-Time
+
+Combine multiple tools for comprehensive monitoring:
+
+```bash
+# Terminal 1: Watch stats
+watch -n 1 auto-cpufreq --stats
+
+# Terminal 2: Monitor temperatures
+watch -n 1 sensors
+
+# Terminal 3: Watch CPU frequencies
+watch -n 1 "grep MHz /proc/cpuinfo"
+```
+
+## Getting Help
+
+If debug information doesn't help you identify the issue:
+
+1. **Use the AI chatbot** for instant diagnosis
+2. **Search existing issues** for similar problems
+3. **Join Discord** for community support
+4. **Submit a detailed bug report** with all debug output
+
+<Tip>
+The more detailed information you provide, the faster the community can help resolve your issue.
+</Tip>

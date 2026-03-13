@@ -1,0 +1,307 @@
+---
+title: Driver Conflicts
+description: Resolving CPU driver conflicts and switching to acpi-cpufreq
+---
+
+Many common issues with auto-cpufreq stem from conflicts with CPU frequency drivers. This guide explains how to identify and resolve these conflicts.
+
+## Understanding CPU Drivers
+
+auto-cpufreq works best with the `acpi-cpufreq` driver. However, many modern Linux systems use `intel_pstate` (for Intel CPUs) or `amd-pstate` (for AMD CPUs) by default, which can conflict with auto-cpufreq's operations.
+
+### Check Your Current Driver
+
+To see which driver your system is currently using:
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+```
+
+## When to Switch Drivers
+
+Consider switching to `acpi-cpufreq` if you experience:
+
+- High CPU temperatures
+- CPU not scaling to minimum/maximum frequencies
+- Suboptimal CPU performance
+- Turbo mode not available or not working
+- Frequency scaling commands being ignored
+
+## Intel CPUs: Disabling intel_pstate
+
+For Intel processors, disable the `intel_pstate` driver to allow auto-cpufreq to use `acpi-cpufreq`.
+
+### For GRUB Users
+
+1. **Edit GRUB configuration**:
+   ```bash
+   sudo nano /etc/default/grub
+   ```
+
+2. **Modify the kernel parameters**:
+   
+   Find the line starting with `GRUB_CMDLINE_LINUX_DEFAULT` and add `intel_pstate=disable`:
+   ```bash
+   GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_pstate=disable"
+   ```
+
+3. **Update GRUB**:
+   
+   <CodeGroup>
+   ```bash Debian/Ubuntu
+   sudo update-grub
+   ```
+   
+   ```bash Arch Linux
+   sudo grub-mkconfig -o /boot/grub/grub.cfg
+   ```
+   
+   ```bash Fedora (UEFI)
+   sudo grub2-mkconfig -o /etc/grub2-efi.cfg
+   ```
+   
+   ```bash Fedora (BIOS)
+   sudo grub2-mkconfig -o /etc/grub2.cfg
+   ```
+   
+   ```bash Fedora (Legacy)
+   sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+   ```
+   </CodeGroup>
+
+4. **Reboot your system**:
+   ```bash
+   sudo reboot
+   ```
+
+### For systemd-boot Users
+
+1. **Edit the kernel command line**:
+   ```bash
+   sudo nano /etc/kernel/cmdline
+   ```
+
+2. **Add the Intel parameter**:
+   ```bash
+   quiet splash intel_pstate=disable
+   ```
+
+3. **Reinstall kernels**:
+   ```bash
+   sudo reinstall-kernels
+   ```
+
+4. **Reboot your system**:
+   ```bash
+   sudo reboot
+   ```
+
+## AMD CPUs: Disabling amd-pstate
+
+For AMD processors, disable the `amd-pstate` driver to allow auto-cpufreq to use `acpi-cpufreq`.
+
+### For GRUB Users
+
+1. **Edit GRUB configuration**:
+   ```bash
+   sudo nano /etc/default/grub
+   ```
+
+2. **Modify the kernel parameters**:
+   
+   Find the line starting with `GRUB_CMDLINE_LINUX_DEFAULT` and add the AMD-specific parameters:
+   ```bash
+   GRUB_CMDLINE_LINUX_DEFAULT="quiet splash initcall_blacklist=amd_pstate_init amd_pstate.enable=0"
+   ```
+
+3. **Update GRUB**:
+   
+   <CodeGroup>
+   ```bash Debian/Ubuntu
+   sudo update-grub
+   ```
+   
+   ```bash Arch Linux
+   sudo grub-mkconfig -o /boot/grub/grub.cfg
+   ```
+   
+   ```bash Fedora (UEFI)
+   sudo grub2-mkconfig -o /etc/grub2-efi.cfg
+   ```
+   
+   ```bash Fedora (BIOS)
+   sudo grub2-mkconfig -o /etc/grub2.cfg
+   ```
+   
+   ```bash Fedora (Legacy)
+   sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+   ```
+   </CodeGroup>
+
+4. **Reboot your system**:
+   ```bash
+   sudo reboot
+   ```
+
+### For systemd-boot Users
+
+1. **Edit the kernel command line**:
+   ```bash
+   sudo nano /etc/kernel/cmdline
+   ```
+
+2. **Add the AMD parameters**:
+   ```bash
+   quiet splash initcall_blacklist=amd_pstate_init amd_pstate.enable=0
+   ```
+
+3. **Reinstall kernels**:
+   ```bash
+   sudo reinstall-kernels
+   ```
+
+4. **Reboot your system**:
+   ```bash
+   sudo reboot
+   ```
+
+## Verifying the Driver Change
+
+After rebooting, verify that the driver has been successfully changed:
+
+```bash
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+```
+
+You should see `acpi-cpufreq` as the output.
+
+## Conflicting Power Management Services
+
+auto-cpufreq can also conflict with other power management services. These should be disabled for optimal operation.
+
+### TLP Conflicts
+
+<Warning>
+auto-cpufreq aims to replace TLP. Using both together for CPU frequency management will lead to conflicts, overheating, and unpredictable behavior.
+</Warning>
+
+**Disable TLP**:
+```bash
+sudo systemctl stop tlp
+sudo systemctl disable tlp
+sudo systemctl mask tlp
+```
+
+<Info>
+Only use both tools in tandem if you configure TLP to not manage CPU frequencies and you know exactly what you're doing.
+</Info>
+
+### GNOME Power Profiles Daemon Conflicts
+
+GNOME Power Profiles daemon conflicts with auto-cpufreq and must be disabled.
+
+#### Automatic Disabling (Installer Method)
+
+When installing via [auto-cpufreq-installer](/installation/auto-installer), the GNOME Power Profiles daemon is automatically detected and disabled.
+
+#### Manual Disabling (Required for AUR/Snap)
+
+<Warning>
+AUR and Snap installations do NOT automatically disable GNOME Power Profiles daemon, which can lead to conflicts.
+</Warning>
+
+**For AUR installations**:
+```bash
+sudo systemctl mask power-profiles-daemon.service
+```
+
+**For Snap installations**, use the `power_helper.py` script:
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+   cd auto-cpufreq
+   ```
+
+2. **Install required dependencies**:
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install python3-psutil python3-pyinotify
+   
+   # Or using pip
+   sudo pip3 install psutil pyinotify --break-system-packages
+   ```
+
+3. **Disable GNOME Power Profiles**:
+   ```bash
+   sudo python3 -m auto_cpufreq.power_helper --gnome_power_disable
+   ```
+
+4. **View all available options**:
+   ```bash
+   sudo python3 -m auto_cpufreq.power_helper --help
+   ```
+
+### TuneD Daemon Conflicts
+
+The TuneD daemon (enabled by default on Fedora 41+) conflicts with auto-cpufreq.
+
+#### Automatic Disabling (Installer Method)
+
+When installing via [auto-cpufreq-installer](/installation/auto-installer), TuneD is automatically detected and disabled.
+
+#### Manual Disabling (Required for AUR)
+
+**For AUR installations**:
+```bash
+sudo systemctl stop tuned
+sudo systemctl disable tuned
+sudo systemctl mask tuned
+```
+
+## Verifying No Conflicts
+
+After making changes, verify that conflicting services are properly disabled:
+
+```bash
+# Check TLP
+systemctl status tlp
+
+# Check GNOME Power Profiles
+systemctl status power-profiles-daemon
+
+# Check TuneD
+systemctl status tuned
+```
+
+All should show as "inactive" or "masked".
+
+## Compatible Services
+
+### thermald
+
+<Info>
+thermald does NOT conflict with auto-cpufreq and is actually recommended to run alongside it.
+</Info>
+
+thermald helps with thermal management and complements auto-cpufreq's functionality:
+
+```bash
+# Install thermald (if not already installed)
+sudo apt install thermald  # Debian/Ubuntu
+sudo pacman -S thermald     # Arch Linux
+sudo dnf install thermald   # Fedora
+
+# Enable and start thermald
+sudo systemctl enable thermald
+sudo systemctl start thermald
+```
+
+## Still Having Issues?
+
+If changing drivers doesn't resolve your issues:
+
+1. **Check the debug output** - See [Debug Mode](/troubleshooting/debug-mode)
+2. **Review common issues** - See [Common Issues](/troubleshooting/common-issues)
+3. **Get immediate help** - Try the [auto-cpufreq-genAI-chatbot](https://foolcontrol.org/?p=4903)
+4. **Submit a bug report** - [Open an issue](https://github.com/AdnanHodzic/auto-cpufreq/issues/new) with full debug output

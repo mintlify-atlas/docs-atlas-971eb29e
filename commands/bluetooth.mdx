@@ -1,0 +1,313 @@
+---
+title: "--bluetooth_boot_off / --bluetooth_boot_on"
+description: "Manage Bluetooth boot behavior"
+icon: "bluetooth"
+---
+
+# Bluetooth Boot Control
+
+The `--bluetooth_boot_off` and `--bluetooth_boot_on` commands control whether Bluetooth is enabled or disabled when your system boots.
+
+## Usage
+
+```bash
+# Disable Bluetooth on boot
+sudo auto-cpufreq --bluetooth_boot_off
+
+# Enable Bluetooth on boot  
+sudo auto-cpufreq --bluetooth_boot_on
+```
+
+<Note>
+These commands modify system boot behavior and require root privileges.
+</Note>
+
+## Why Disable Bluetooth on Boot?
+
+Disabling Bluetooth on boot provides several benefits:
+
+- **🔋 Battery savings** - Bluetooth consumes power even when not actively used
+- **🔒 Security** - Reduces attack surface by disabling unused radios
+- **🔇 Fewer processes** - One less daemon running in the background
+
+<Info>
+You can still manually enable Bluetooth whenever needed after boot. This setting only affects the boot-time default.
+</Info>
+
+## Disable on Boot
+
+```bash
+sudo auto-cpufreq --bluetooth_boot_off
+```
+
+**What it does:**
+- Creates a systemd service that disables Bluetooth at boot
+- Bluetooth remains off until you manually enable it
+- You can still turn on Bluetooth when needed via GUI or command line
+
+**Use cases:**
+- Maximizing battery life
+- You rarely use Bluetooth
+- Security-conscious users
+- Reducing background services
+
+### GNOME Behavior
+
+On GNOME desktops, Bluetooth is automatically re-enabled:
+- After system reboot
+- After suspend/wake
+- Even if you manually disabled it
+
+The `--bluetooth_boot_off` command prevents this automatic re-enabling.
+
+## Enable on Boot
+
+```bash
+sudo auto-cpufreq --bluetooth_boot_on
+```
+
+**What it does:**
+- Removes the boot-time Bluetooth disable service
+- Bluetooth will be enabled at boot (system default)
+- Reverts the `--bluetooth_boot_off` setting
+
+**Use cases:**
+- You use Bluetooth devices regularly
+- Auto-connecting to Bluetooth headphones/speakers
+- Bluetooth keyboards or mice
+- After running `--bluetooth_boot_off` and changing your mind
+
+## How It Works
+
+<Steps>
+  <Step title="Service creation">
+    Creates a systemd service:
+    ```
+    /etc/systemd/system/bluetooth-boot-disable.service
+    ```
+  </Step>
+  
+  <Step title="Service configuration">
+    The service runs at boot and executes:
+    ```bash
+    rfkill block bluetooth
+    ```
+  </Step>
+  
+  <Step title="Enable service">
+    ```bash
+    systemctl enable bluetooth-boot-disable.service
+    ```
+  </Step>
+  
+  <Step title="Effect at next boot">
+    Bluetooth starts disabled, saving power and preventing GNOME from auto-enabling it.
+  </Step>
+</Steps>
+
+## Manually Enabling Bluetooth After Boot
+
+Even with `--bluetooth_boot_off`, you can enable Bluetooth when needed:
+
+<Tabs>
+  <Tab title="GUI (GNOME)">
+    1. Open Settings
+    2. Click Bluetooth
+    3. Toggle Bluetooth ON
+  </Tab>
+  
+  <Tab title="Command Line">
+    ```bash
+    # Enable Bluetooth
+    rfkill unblock bluetooth
+    
+    # Start Bluetooth service
+    sudo systemctl start bluetooth
+    ```
+  </Tab>
+  
+  <Tab title="bluetoothctl">
+    ```bash
+    bluetoothctl
+    power on
+    scan on
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+After manually enabling Bluetooth, it will work normally until the next reboot (when it will be disabled again).
+</Info>
+
+## During Daemon Installation
+
+When installing the auto-cpufreq daemon, you'll be prompted:
+
+```
+Would you like to disable Bluetooth on boot? [Y/n]:
+```
+
+- **Y** (default) - Runs `--bluetooth_boot_off` automatically
+- **n** - Skips Bluetooth configuration
+
+This is part of the recommended setup for battery optimization.
+
+## Snap Package Users
+
+Snap packages have limited permissions and cannot directly modify system services.
+
+### Manual Bluetooth Disable (Snap)
+
+For Snap installations, use the `power_helper.py` script:
+
+<Steps>
+  <Step title="Clone repository">
+    ```bash
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    # Debian/Ubuntu
+    sudo apt install python3-psutil python3-pyinotify
+    
+    # Or via pip
+    sudo pip3 install psutil pyinotify --break-system-packages
+    ```
+  </Step>
+  
+  <Step title="Disable Bluetooth">
+    ```bash
+    sudo python3 -m auto_cpufreq.power_helper --bluetooth_boot_disable
+    ```
+  </Step>
+</Steps>
+
+To enable:
+```bash
+sudo python3 -m auto_cpufreq.power_helper --bluetooth_boot_enable
+```
+
+## Verification
+
+Verify Bluetooth boot setting:
+
+```bash
+# Check service status
+systemctl status bluetooth-boot-disable.service
+
+# Check if Bluetooth is blocked
+rfkill list bluetooth
+
+# Expected output when disabled:
+# 0: hci0: Bluetooth
+#   Soft blocked: yes
+#   Hard blocked: no
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Bluetooth still enabled after reboot">
+    Verify the service is active:
+    ```bash
+    systemctl status bluetooth-boot-disable.service
+    systemctl enable bluetooth-boot-disable.service
+    ```
+    
+    Check if GNOME is overriding it:
+    ```bash
+    systemctl status bluetooth.service
+    ```
+  </Accordion>
+  
+  <Accordion title="Cannot enable Bluetooth manually">
+    Check if it's hard blocked (hardware switch):
+    ```bash
+    rfkill list
+    ```
+    
+    If hard blocked, use physical Bluetooth switch or BIOS setting.
+    
+    If soft blocked:
+    ```bash
+    rfkill unblock bluetooth
+    ```
+  </Accordion>
+  
+  <Accordion title="Service not found">
+    Manually create the service:
+    ```bash
+    sudo auto-cpufreq --bluetooth_boot_off
+    ```
+    
+    Or check if you're using Snap (requires power_helper.py).
+  </Accordion>
+  
+  <Accordion title="Permission denied (Snap)">
+    Snap packages can't modify system services. Use the power_helper.py script as described above.
+  </Accordion>
+</AccordionGroup>
+
+## Power Savings
+
+Disabling Bluetooth at boot saves:
+
+- **2-5% battery life** on most laptops
+- **∼0.5-1W** of power consumption
+- **1 background service** (bluetooth.service)
+
+Actual savings depend on:
+- Your Bluetooth hardware
+- Whether devices are paired
+- Bluetooth usage patterns
+
+## Related Configuration
+
+You can also configure other boot-time power optimizations:
+
+```bash
+# WiFi (if you don't need it)
+rfkill block wifi
+
+# NFC (if available)
+rfkill block nfc
+
+# View all radio devices
+rfkill list
+```
+
+## Undoing the Setting
+
+To revert to default (Bluetooth enabled at boot):
+
+```bash
+sudo auto-cpufreq --bluetooth_boot_on
+```
+
+Or manually:
+
+```bash
+sudo systemctl disable bluetooth-boot-disable.service
+sudo systemctl stop bluetooth-boot-disable.service
+rfkill unblock bluetooth
+```
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Install Daemon" icon="download" href="/commands/install">
+    Bluetooth prompt during installation
+  </Card>
+  <Card title="Advanced Settings" icon="sliders" href="/advanced/bluetooth-control">
+    More about Bluetooth control
+  </Card>
+  <Card title="Config File" icon="file-lines" href="/configuration/config-file">
+    Other power-saving configurations
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    Monitor power consumption
+  </Card>
+</CardGroup>

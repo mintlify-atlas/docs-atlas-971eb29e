@@ -1,0 +1,341 @@
+---
+title: "--update"
+description: "Update auto-cpufreq to the latest version"
+icon: "arrow-up"
+---
+
+# Update Command
+
+The `--update` command updates auto-cpufreq to the latest release from GitHub, reinstalls the daemon, and preserves your configuration.
+
+## Usage
+
+```bash
+sudo auto-cpufreq --update
+```
+
+Or specify a custom directory:
+
+```bash
+sudo auto-cpufreq --update=/path/to/directory
+```
+
+<Note>
+This command requires root privileges and an active internet connection.
+</Note>
+
+## What It Does
+
+The update command:
+
+1. **Checks** for new releases on GitHub
+2. **Prompts** for confirmation
+3. **Removes** the current daemon
+4. **Clones** the latest version from GitHub
+5. **Installs** the new version
+6. **Reinstalls** the daemon
+7. **Preserves** your configuration file
+
+<Warning>
+This update method only works for installations done via auto-cpufreq-installer. Snap and AUR installations use their own update mechanisms.
+</Warning>
+
+## Update Process
+
+<Steps>
+  <Step title="Check for updates">
+    auto-cpufreq queries GitHub API for the latest release:
+    ```bash
+    Checking for updates...
+    Current version: v2.2.0
+    Latest version: v2.3.0
+    New version available!
+    ```
+  </Step>
+  
+  <Step title="Confirmation">
+    You'll be prompted to continue:
+    ```bash
+    Do you want to update auto-cpufreq to the latest release? [Y/n]:
+    ```
+  </Step>
+  
+  <Step title="Remove daemon">
+    The current daemon is stopped and removed:
+    ```bash
+    Removing current daemon...
+    Daemon removed successfully
+    ```
+  </Step>
+  
+  <Step title="Download latest version">
+    Clones the repository (default: `/opt/auto-cpufreq/source`):
+    ```bash
+    Cloning into '/opt/auto-cpufreq/source/auto-cpufreq'...
+    ```
+  </Step>
+  
+  <Step title="Install new version">
+    Runs the installer:
+    ```bash
+    Installing auto-cpufreq...
+    Installation complete
+    ```
+  </Step>
+  
+  <Step title="Reinstall daemon">
+    Enables and starts the updated daemon:
+    ```bash
+    Enabling daemon...
+    auto-cpufreq daemon installed and started successfully!
+    ```
+  </Step>
+</Steps>
+
+## Update Methods by Installation Type
+
+<Tabs>
+  <Tab title="auto-cpufreq-installer">
+    **Use `--update` command:**
+    
+    ```bash
+    sudo auto-cpufreq --update
+    ```
+    
+    This is the recommended update method for installer-based installations.
+  </Tab>
+  
+  <Tab title="Snap Store">
+    **Use snap refresh:**
+    
+    ```bash
+    sudo snap refresh auto-cpufreq
+    ```
+    
+    Snap handles updates automatically by default.
+  </Tab>
+  
+  <Tab title="AUR (Arch Linux)">
+    **Use your AUR helper:**
+    
+    ```bash
+    yay -Syu auto-cpufreq
+    # or
+    paru -Syu auto-cpufreq
+    ```
+    
+    Or manually:
+    ```bash
+    cd ~/aur/auto-cpufreq
+    git pull
+    makepkg -si
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Tab>
+  
+  <Tab title="NixOS">
+    **Update your flake input:**
+    
+    ```bash
+    nix flake update auto-cpufreq
+    sudo nixos-rebuild switch
+    ```
+    
+    Or for nixpkgs:
+    ```bash
+    sudo nixos-rebuild switch --upgrade
+    ```
+  </Tab>
+  
+  <Tab title="Gentoo">
+    **Update with emerge:**
+    
+    ```bash
+    sudo emaint sync -r guru
+    sudo emerge --ask --update auto-cpufreq
+    ```
+  </Tab>
+</Tabs>
+
+## Custom Update Directory
+
+By default, updates are cloned to `/opt/auto-cpufreq/source`. To use a different directory:
+
+```bash
+sudo auto-cpufreq --update=/custom/path
+```
+
+The repository will be cloned to `/custom/path/auto-cpufreq`.
+
+## What Gets Preserved
+
+During updates, these are preserved:
+
+✅ **Configuration file** - `/etc/auto-cpufreq.conf`  
+✅ **Governor overrides** - Force settings persist  
+✅ **Turbo overrides** - Turbo mode settings persist  
+✅ **Battery thresholds** - Charging thresholds remain
+
+## What Gets Replaced
+
+⚠️ **Binary files** - Updated to new version  
+⚠️ **Systemd service** - Recreated with new version  
+⚠️ **GUI files** - Updated (if applicable)  
+⚠️ **Scripts** - Updated to new version
+
+## Verification
+
+After updating, verify the new version:
+
+```bash
+auto-cpufreq --version
+```
+
+Check daemon status:
+
+```bash
+systemctl status auto-cpufreq
+auto-cpufreq --stats
+```
+
+## Update Frequency
+
+<Info>
+auto-cpufreq is actively maintained. Check for updates periodically or watch the [GitHub releases page](https://github.com/AdnanHodzic/auto-cpufreq/releases).
+</Info>
+
+Major releases typically include:
+- New features
+- Performance improvements  
+- Bug fixes
+- Hardware support additions
+- Security updates
+
+## Rollback
+
+If you need to rollback to a previous version:
+
+<Steps>
+  <Step title="Remove current version">
+    ```bash
+    sudo auto-cpufreq --remove
+    ```
+  </Step>
+  
+  <Step title="Clone specific version">
+    ```bash
+    cd /opt/auto-cpufreq/source
+    sudo rm -rf auto-cpufreq
+    sudo git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    sudo git checkout v2.2.0  # Replace with desired version
+    ```
+  </Step>
+  
+  <Step title="Reinstall">
+    ```bash
+    sudo ./auto-cpufreq-installer
+    sudo auto-cpufreq --install
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Update not available for your installation">
+    If you installed via Snap or AUR:
+    
+    **Snap:**
+    ```bash
+    sudo snap refresh auto-cpufreq
+    ```
+    
+    **AUR:**
+    ```bash
+    yay -Syu auto-cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="Network connection error">
+    Check your internet connection and try again:
+    ```bash
+    ping github.com
+    ```
+    
+    If behind a proxy, configure git:
+    ```bash
+    git config --global http.proxy http://proxy:port
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied">
+    Ensure you're using sudo:
+    ```bash
+    sudo auto-cpufreq --update
+    ```
+  </Accordion>
+  
+  <Accordion title="Directory already exists">
+    Clean up the old download:
+    ```bash
+    sudo rm -rf /opt/auto-cpufreq/source/auto-cpufreq
+    sudo auto-cpufreq --update
+    ```
+  </Accordion>
+  
+  <Accordion title="Service fails after update">
+    Manually reinstall:
+    ```bash
+    sudo auto-cpufreq --remove
+    cd /opt/auto-cpufreq/source/auto-cpufreq
+    sudo ./auto-cpufreq-installer
+    sudo auto-cpufreq --install
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Post-Update Checklist
+
+After updating:
+
+- [ ] Verify version: `auto-cpufreq --version`
+- [ ] Check daemon status: `systemctl status auto-cpufreq`
+- [ ] View stats: `auto-cpufreq --stats`
+- [ ] Monitor CPU temperature for a few hours
+- [ ] Check battery life over several cycles
+- [ ] Review new features in [release notes](https://github.com/AdnanHodzic/auto-cpufreq/releases)
+
+## Manual Update (Alternative)
+
+If `--update` doesn't work, manually update:
+
+```bash
+# Remove daemon
+sudo auto-cpufreq --remove
+
+# Update source
+cd /opt/auto-cpufreq/source/auto-cpufreq
+sudo git pull
+
+# Reinstall
+sudo ./auto-cpufreq-installer
+sudo auto-cpufreq --install
+```
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Install Daemon" icon="download" href="/commands/install">
+    Install or reinstall the daemon
+  </Card>
+  <Card title="Remove Daemon" icon="trash" href="/commands/remove">
+    Remove before manual update
+  </Card>
+  <Card title="Version" icon="tag" href="/commands/debug">
+    Check current version
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    Verify daemon after update
+  </Card>
+</CardGroup>

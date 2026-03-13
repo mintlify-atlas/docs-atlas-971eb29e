@@ -1,0 +1,320 @@
+---
+title: Turbo Boost Override
+description: Control CPU turbo boost behavior using the --turbo flag
+---
+
+By default, auto-cpufreq handles CPU turbo mode automatically, enabling it under load and disabling it otherwise to balance performance and efficiency. You can override this behavior to force turbo boost on or off.
+
+## What is Turbo Boost?
+
+Turbo Boost (Intel) or Turbo Core (AMD) allows the CPU to run at higher frequencies than its base clock speed when thermal and power conditions permit. This provides:
+
+- **Performance benefits**: 20-40% faster for single-threaded tasks
+- **Power cost**: Significantly increased energy consumption
+- **Heat generation**: Higher temperatures under load
+
+## Using the --turbo Flag
+
+The `--turbo` flag allows you to override automatic turbo management:
+
+```bash
+sudo auto-cpufreq --turbo=mode
+```
+
+### Available Modes
+
+<CardGroup cols={3}>
+  <Card title="Always" icon="bolt">
+    Force turbo boost always on
+  </Card>
+  <Card title="Auto" icon="wand-magic-sparkles">
+    Automatic turbo management (default)
+  </Card>
+  <Card title="Never" icon="ban">
+    Force turbo boost always off
+  </Card>
+</CardGroup>
+
+## Always Mode
+
+Keep turbo boost always enabled:
+
+```bash
+sudo auto-cpufreq --turbo=always
+```
+
+**Characteristics:**
+- CPU can reach maximum frequency at all times
+- Best single-threaded performance
+- Highest power consumption
+- Increased heat generation
+- Significantly reduced battery life
+
+<Warning>
+Always-on turbo boost can drain battery 30-50% faster and may cause thermal throttling under sustained load.
+</Warning>
+
+### When to Use Always Mode
+
+- **Maximum performance needed**: CPU-intensive workloads
+- **Short bursts**: When plugged in and thermal headroom available
+- **Benchmarking**: To achieve consistent maximum performance
+- **Gaming**: For maximum frame rates (when plugged in)
+
+## Never Mode
+
+Disable turbo boost completely:
+
+```bash
+sudo auto-cpufreq --turbo=never
+```
+
+**Characteristics:**
+- CPU limited to base frequency
+- Maximum battery life
+- Lowest power consumption
+- Reduced heat generation
+- Lower performance for intensive tasks
+
+### When to Use Never Mode
+
+- **Extend battery life**: When you need maximum runtime
+- **Thermal management**: System overheating or loud fan noise
+- **Light workloads**: Web browsing, documents, video playback
+- **Power constraints**: Running on very low battery
+- **Silent operation**: Keeping fan noise minimal
+
+<Info>
+Disabling turbo boost can extend battery life by 20-40% for typical workloads.
+</Info>
+
+## Auto Mode (Default)
+
+Return to automatic turbo management:
+
+```bash
+sudo auto-cpufreq --turbo=auto
+```
+
+In auto mode, auto-cpufreq intelligently manages turbo boost based on:
+
+### On Battery Power
+
+- **High CPU load (≥30%)**: Turbo enabled
+- **High individual core load (100%)**: Turbo enabled
+- **High system load**: Turbo enabled  
+- **Otherwise**: Turbo disabled to save battery
+
+### On AC Power (Charging)
+
+- **High CPU load (≥20%)**: Turbo enabled
+- **Individual core load (≥75%)**: Turbo enabled
+- **High system load**: Turbo enabled
+- **High temperature (≥60-70°C)**: Turbo disabled to prevent overheating
+- **Low load + low temp**: Turbo disabled to save power
+
+<Note>
+auto-cpufreq continuously monitors CPU usage, temperature, and system load to make intelligent turbo boost decisions every few seconds.
+</Note>
+
+## Persistence
+
+<Warning>
+Any turbo override set with `--turbo` will **persist across reboots**. The override is saved to disk and continues to apply even after restarting your system.
+</Warning>
+
+To check current turbo status:
+
+```bash
+sudo auto-cpufreq --stats
+```
+
+If an override is active, you'll see:
+
+```
+Configuration file enforces turbo boost
+```
+
+Or when checking manually:
+
+```bash
+cat /sys/devices/system/cpu/intel_pstate/no_turbo  # Intel
+cat /sys/devices/system/cpu/cpufreq/boost           # AMD
+```
+
+## Override Storage
+
+The turbo override is stored in:
+- **Non-Snap**: `/opt/auto-cpufreq/turbo-override.pickle`
+- **Snap**: `/var/snap/auto-cpufreq/current/turbo-override.pickle`
+
+## Configuration File Control
+
+You can also set turbo behavior in the [configuration file](/configuration/config-file):
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+turbo = auto  # or: always, never
+
+[battery]  
+turbo = auto  # or: always, never
+```
+
+The `--turbo` command line override takes precedence over config file settings.
+
+### Priority Order
+
+1. **Command line override** (`--turbo` flag) - Highest priority
+2. **Config file setting** (`turbo =` option)
+3. **Auto mode default** - If nothing specified
+
+<Info>
+If you want config file settings to apply, remember to reset any active override with `--turbo=auto`.
+</Info>
+
+## Checking Turbo Status
+
+### Intel CPUs (intel_pstate)
+
+```bash
+# 0 = turbo enabled, 1 = turbo disabled (inverted!)
+cat /sys/devices/system/cpu/intel_pstate/no_turbo
+```
+
+### AMD CPUs (cpufreq)
+
+```bash
+# 1 = turbo enabled, 0 = turbo disabled
+cat /sys/devices/system/cpu/cpufreq/boost
+```
+
+### AMD CPUs (amd-pstate)
+
+```bash
+cat /sys/devices/system/cpu/amd_pstate/status
+```
+
+If status shows "active", turbo is controlled by the EPP (Energy Performance Preference) setting instead.
+
+## Impact on Performance and Battery
+
+### Performance Impact
+
+| Workload Type | Always | Auto | Never |
+|--------------|--------|------|-------|
+| Single-threaded | +30-40% | +20-30% | Baseline |
+| Multi-threaded | +20-30% | +10-20% | Baseline |
+| Light tasks | No difference | No difference | No difference |
+
+### Battery Impact
+
+| Usage Pattern | Always | Auto | Never |
+|--------------|--------|------|-------|
+| Idle/Light | -40% | -5% | Baseline |
+| Mixed | -30% | -15% | Baseline |
+| Heavy | -20% | -10% | Baseline |
+
+<Note>
+Battery impact percentages are approximate and vary by CPU, workload, and system configuration.
+</Note>
+
+## Examples
+
+### Gaming Session on AC Power
+
+```bash
+# Enable turbo for gaming
+sudo auto-cpufreq --turbo=always
+
+# Game...
+
+# Return to auto when done
+sudo auto-cpufreq --turbo=auto
+```
+
+### Long Flight with Limited Battery
+
+```bash
+# Disable turbo to maximize battery life
+sudo auto-cpufreq --turbo=never
+
+# Work during flight...
+
+# Re-enable auto mode when you can charge
+sudo auto-cpufreq --turbo=auto
+```
+
+### Quiet Cafe Work Session
+
+```bash
+# Disable turbo to keep fans quiet
+sudo auto-cpufreq --turbo=never
+
+# Work quietly...
+
+# Back to auto when leaving
+sudo auto-cpufreq --turbo=auto
+```
+
+## Troubleshooting
+
+### Turbo Not Available
+
+If you see "Warning: CPU turbo is not available":
+
+1. **Check CPU support**: Not all CPUs have turbo boost
+2. **BIOS settings**: Turbo may be disabled in BIOS/UEFI
+3. **Driver issue**: 
+   ```bash
+   cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+   ```
+
+### AMD CPUs with amd-pstate-epp
+
+If you see "CPU turbo is controlled by amd-pstate-epp driver":
+
+Turbo boost is managed through EPP settings instead. Configure via:
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+energy_performance_preference = performance  # Enables turbo
+
+[battery]
+energy_performance_preference = power  # Limits turbo
+```
+
+[Learn more about EPP →](/configuration/power-profiles)
+
+### Override Not Applying
+
+1. **Check daemon status**:
+   ```bash
+   sudo systemctl status auto-cpufreq
+   ```
+
+2. **Restart daemon**:
+   ```bash
+   sudo systemctl restart auto-cpufreq
+   ```
+
+3. **Verify override**:
+   ```bash
+   sudo auto-cpufreq --stats
+   ```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration File" icon="file-lines" href="/configuration/config-file">
+    Set turbo behavior in the config file
+  </Card>
+  <Card title="Governor Override" icon="gauge-high" href="/configuration/governor-override">
+    Force specific CPU governors
+  </Card>
+  <Card title="Power Profiles" icon="bolt" href="/configuration/power-profiles">
+    Configure EPP and platform profiles
+  </Card>
+  <Card title="CPU Frequency Scaling" icon="microchip" href="/concepts/how-it-works">
+    Learn about CPU frequency management
+  </Card>
+</CardGroup>

@@ -1,0 +1,172 @@
+---
+title: "Command Overview"
+description: "Complete reference of all auto-cpufreq commands"
+icon: "terminal"
+---
+
+# Command Overview
+
+auto-cpufreq provides a comprehensive set of commands for managing CPU frequency scaling and power optimization on Linux systems.
+
+## Quick Reference
+
+<CardGroup cols={2}>
+  <Card title="Monitor" icon="eye" href="/commands/monitor">
+    View CPU optimization suggestions without making changes
+  </Card>
+  <Card title="Live" icon="circle-play" href="/commands/live">
+    Apply temporary CPU optimizations for testing
+  </Card>
+  <Card title="Install" icon="download" href="/commands/install">
+    Install daemon for permanent automatic optimizations
+  </Card>
+  <Card title="Remove" icon="trash" href="/commands/remove">
+    Remove the auto-cpufreq daemon
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    View live statistics from the running daemon
+  </Card>
+  <Card title="Update" icon="arrow-up" href="/commands/update">
+    Update auto-cpufreq to the latest version
+  </Card>
+  <Card title="Force" icon="gauge-high" href="/commands/force">
+    Override CPU governor selection
+  </Card>
+  <Card title="Turbo" icon="bolt" href="/commands/turbo">
+    Control CPU turbo boost mode
+  </Card>
+  <Card title="Bluetooth" icon="bluetooth" href="/commands/bluetooth">
+    Manage Bluetooth boot behavior
+  </Card>
+  <Card title="Config" icon="file-lines" href="/commands/config">
+    Use a custom configuration file
+  </Card>
+  <Card title="Debug" icon="bug" href="/commands/debug">
+    Display debug information for troubleshooting
+  </Card>
+</CardGroup>
+
+## Command Categories
+
+### Monitoring & Testing
+
+Commands for viewing system state and testing optimizations without permanent changes:
+
+- `--monitor` - Preview optimization suggestions
+- `--live` - Apply temporary optimizations
+- `--stats` - View daemon statistics
+- `--debug` - Show debug information
+
+### Daemon Management
+
+Commands for installing, updating, and removing the permanent daemon:
+
+- `--install` - Install the daemon
+- `--remove` - Remove the daemon
+- `--update` - Update to latest version
+
+### Configuration & Override
+
+Commands for customizing behavior:
+
+- `--config` - Use custom config file
+- `--force` - Override governor
+- `--turbo` - Override turbo mode
+
+### Utilities
+
+Additional helpful commands:
+
+- `--bluetooth_boot_off` / `--bluetooth_boot_on` - Bluetooth control
+- `--version` - Show version
+- `--help` - Display help
+
+## Common Usage Patterns
+
+<AccordionGroup>
+  <Accordion title="First-time setup">
+    ```bash
+    # 1. Preview what auto-cpufreq will do
+    sudo auto-cpufreq --monitor
+    
+    # 2. Test with temporary changes
+    sudo auto-cpufreq --live
+    
+    # 3. Install for permanent use
+    sudo auto-cpufreq --install
+    
+    # 4. View statistics
+    auto-cpufreq --stats
+    ```
+  </Accordion>
+  
+  <Accordion title="Using custom configuration">
+    ```bash
+    # Create config file at /etc/auto-cpufreq.conf
+    # Then install daemon (it will auto-detect the config)
+    sudo auto-cpufreq --install
+    
+    # Or specify custom config location
+    sudo auto-cpufreq --config /path/to/config.conf --monitor
+    ```
+  </Accordion>
+  
+  <Accordion title="Temporary performance boost">
+    ```bash
+    # Force performance mode
+    sudo auto-cpufreq --force=performance
+    
+    # Force turbo always on
+    sudo auto-cpufreq --turbo=always
+    
+    # Reset to normal
+    sudo auto-cpufreq --force=reset
+    sudo auto-cpufreq --turbo=auto
+    ```
+  </Accordion>
+  
+  <Accordion title="Troubleshooting">
+    ```bash
+    # Get debug information
+    sudo auto-cpufreq --debug
+    
+    # Check daemon status
+    systemctl status auto-cpufreq
+    
+    # View daemon logs
+    sudo journalctl -u auto-cpufreq -f
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Root Privileges
+
+<Warning>
+Most auto-cpufreq commands require root privileges because they modify system CPU settings. Use `sudo` for commands that make changes.
+</Warning>
+
+Commands that require `sudo`:
+- `--monitor`
+- `--live`
+- `--install`
+- `--remove`
+- `--update`
+- `--force`
+- `--turbo`
+- `--bluetooth_boot_off` / `--bluetooth_boot_on`
+- `--debug`
+
+Commands that work without `sudo`:
+- `--stats` (if daemon is installed)
+- `--version`
+- `--help`
+
+## Getting Help
+
+View all available options:
+
+```bash
+auto-cpufreq --help
+```
+
+For detailed information about a specific command, see the individual command pages linked above.

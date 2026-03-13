@@ -1,0 +1,156 @@
+---
+title: Monitor Mode
+description: Learn how to use auto-cpufreq's monitor mode to see CPU optimization suggestions without making any system changes
+icon: eye
+---
+
+## What is Monitor Mode?
+
+Monitor mode allows you to observe what auto-cpufreq would do to optimize your system without actually making any changes. This is a read-only mode that provides suggestions and displays real-time system information, making it perfect for evaluating auto-cpufreq before committing to permanent changes.
+
+<Info>
+  No changes are made to your system in monitor mode. This is solely to demonstrate what auto-cpufreq could do for your system.
+</Info>
+
+## Running Monitor Mode
+
+To start monitor mode, run the following command with sudo privileges:
+
+```bash
+sudo auto-cpufreq --monitor
+```
+
+<Note>
+  Root privileges are required because auto-cpufreq needs to read system-level CPU and power management information.
+</Note>
+
+## What Information Does Monitor Mode Show?
+
+Monitor mode displays a comprehensive real-time view of your system, split into two columns:
+
+### Left Column - System Information & CPU Stats
+
+- **System Information**
+  - Linux distribution name and version
+  - Linux kernel version
+  - Processor model
+  - Number of cores
+  - System architecture
+  - CPU driver in use
+
+- **Current CPU Stats**
+  - CPU maximum frequency
+  - CPU minimum frequency
+  - Per-core information:
+    - Usage percentage
+    - Temperature (°C)
+    - Current frequency (MHz)
+  - CPU fan speed (if available)
+
+### Right Column - Battery, Scaling & System Stats
+
+- **Battery Stats** (if applicable)
+  - Battery status (charging/discharging)
+  - Battery percentage
+  - AC power status
+  - Charging thresholds (if configured)
+
+- **CPU Frequency Scaling**
+  - Current governor in use
+  - **Suggested governor** (highlighted in yellow)
+  - EPP (Energy Performance Preference) settings
+  - EPB (Energy Performance Bias) settings
+
+- **System Statistics**
+  - Total CPU usage
+  - System load average
+  - Average temperature across all cores
+  - Turbo boost status
+  - **Suggested turbo boost setting** (highlighted in yellow)
+
+<CardGroup cols={2}>
+  <Card title="Governor Suggestions" icon="microchip">
+    Monitor mode suggests either `powersave` or `performance` governors based on battery state, CPU usage, temperature, and system load.
+  </Card>
+  <Card title="Turbo Suggestions" icon="bolt">
+    Turbo boost suggestions are made dynamically based on current system load and thermal conditions to balance performance and efficiency.
+  </Card>
+</CardGroup>
+
+## When to Use Monitor Mode
+
+Monitor mode is ideal in several scenarios:
+
+<Steps>
+  <Step title="Before Installing the Daemon">
+    Run monitor mode to see how auto-cpufreq would optimize your system before committing to permanent changes.
+  </Step>
+  <Step title="Troubleshooting">
+    Use monitor mode to diagnose CPU frequency scaling issues or verify that auto-cpufreq detects your hardware correctly.
+  </Step>
+  <Step title="Learning">
+    Monitor mode helps you understand how different governors and settings affect your system under various workloads.
+  </Step>
+  <Step title="Comparing Settings">
+    Observe system behavior with different configurations by running monitor mode with custom config files.
+  </Step>
+</Steps>
+
+## Using Monitor Mode with Custom Config
+
+You can run monitor mode with a custom configuration file to see how specific settings would behave:
+
+```bash
+sudo auto-cpufreq --monitor --config /path/to/config.conf
+```
+
+## Navigating the Monitor Interface
+
+The monitor interface is built using a terminal UI that updates every 2 seconds:
+
+- Press **Q** or **Ctrl+C** to quit
+- Use **↑** and **↓** arrow keys to scroll
+- Use **PageUp** and **PageDown** for faster scrolling
+
+<Warning>
+  If you have conflicting services like GNOME Power Profiles or TLP running, monitor mode will detect them and prompt you to continue. These services should be disabled before installing the daemon.
+</Warning>
+
+## Example Output
+
+Monitor mode displays information similar to this:
+
+```
+Monitor Mode - 14:32:15
+
+┌─ System Information ──────────┐  ┌─ Battery Stats ────────────────┐
+│ Linux distro: Ubuntu 22.04    │  │ Battery status: discharging    │
+│ Linux kernel: 6.5.0-15        │  │ Battery percentage: 67%        │
+│ Processor: Intel Core i7-1165G7  │ AC plugged: No                │
+│ Cores: 8                      │  │                                │
+│ Architecture: x86_64          │  ├─ CPU Frequency Scaling ────────┤
+│ Driver: intel_pstate          │  │ Setting to use: "powersave"    │
+│                               │  │ EPP setting: balance_power     │
+└───────────────────────────────┘  │ Setting turbo boost: Auto mode │
+                                    │                                │
+┌─ Current CPU Stats ───────────┐  ├─ System Statistics ────────────┤
+│ CPU max frequency: 4700 MHz   │  │ Total CPU usage: 23.4 %        │
+│ CPU min frequency: 400 MHz    │  │ Total system load: 0.87        │
+│                               │  │ Average temp: 52.30 °C         │
+│ Core  Usage  Temp    Freq     │  │ Load optimal                   │
+│ CPU0   25.1%  51°C  1200 MHz  │  │ Optimal total CPU usage        │
+│ CPU1   18.3%  53°C  1100 MHz  │  └────────────────────────────────┘
+│ ...                           │
+└───────────────────────────────┘
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Try Live Mode" icon="circle-play" href="/usage/live-mode">
+    Once you're comfortable with the suggestions, try live mode to apply temporary optimizations.
+  </Card>
+  <Card title="Install the Daemon" icon="download" href="/usage/daemon-mode">
+    Ready to make optimizations permanent? Install the auto-cpufreq daemon.
+  </Card>
+</CardGroup>

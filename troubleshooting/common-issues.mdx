@@ -1,0 +1,174 @@
+---
+title: Common Issues
+description: Solutions to frequently encountered problems with auto-cpufreq
+---
+
+If you're experiencing issues with auto-cpufreq after installation, this guide will help you diagnose and resolve common problems.
+
+<Tip>
+Before submitting an issue, try the [auto-cpufreq-genAI-chatbot](https://foolcontrol.org/?p=4903) to get immediate answers to your questions.
+</Tip>
+
+## Common Problems
+
+<CardGroup cols={2}>
+  <Card title="High CPU Temperatures" icon="temperature-high">
+    CPU running hotter than expected despite auto-cpufreq being active
+  </Card>
+  <Card title="CPU Not Scaling" icon="gauge">
+    CPU frequency not adjusting to minimum/maximum frequencies as expected
+  </Card>
+  <Card title="Turbo Mode Issues" icon="rocket">
+    Turbo boost not available or not working properly
+  </Card>
+  <Card title="Suboptimal Performance" icon="bolt">
+    System performance not meeting expectations
+  </Card>
+</CardGroup>
+
+## Driver-Related Issues
+
+Many common issues stem from CPU frequency driver conflicts. If you're experiencing any of the problems above, the most common solution is to switch from `intel_pstate` or `amd-pstate` to the `acpi-cpufreq` driver.
+
+### Why Change Drivers?
+
+The `intel_pstate` and `amd-pstate` drivers can sometimes conflict with auto-cpufreq's frequency scaling operations, leading to:
+
+- CPU not responding to frequency scaling commands
+- Temperature management issues
+- Turbo mode unavailability
+- Reduced battery life
+
+Switching to `acpi-cpufreq` often resolves these issues by giving auto-cpufreq more direct control over CPU frequency scaling.
+
+<Note>
+For detailed instructions on changing CPU drivers, see the [Driver Conflicts](/troubleshooting/driver-conflicts) page.
+</Note>
+
+## Solutions by Problem Type
+
+### High CPU Temperatures
+
+If your CPU is running hotter than expected:
+
+1. **Check for conflicting services** - Ensure TLP, GNOME Power Profiles, or TuneD are not running alongside auto-cpufreq
+2. **Verify driver configuration** - Consider switching to `acpi-cpufreq` driver (see [Driver Conflicts](/troubleshooting/driver-conflicts))
+3. **Review your config file** - If using a custom configuration at `/etc/auto-cpufreq.conf`, ensure governor and turbo settings are appropriate
+4. **Install thermald** - Consider running [thermald](https://wiki.debian.org/thermald) alongside auto-cpufreq for better thermal management
+
+<Warning>
+thermald is recommended to run alongside auto-cpufreq and does not conflict with it.
+</Warning>
+
+### CPU Not Scaling Properly
+
+If CPU frequency isn't adjusting as expected:
+
+1. **Check current driver**:
+   ```bash
+   cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+   ```
+
+2. **Verify available governors**:
+   ```bash
+   cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+   ```
+
+3. **Switch to acpi-cpufreq** - See [Driver Conflicts](/troubleshooting/driver-conflicts) for instructions
+
+4. **Check daemon status**:
+   ```bash
+   systemctl status auto-cpufreq
+   ```
+   For Snap installations:
+   ```bash
+   systemctl status snap.auto-cpufreq.service.service
+   ```
+
+### Turbo Mode Not Available
+
+If turbo boost is not working:
+
+1. **Verify hardware support** - Ensure your CPU supports turbo boost
+2. **Check BIOS settings** - Turbo mode might be disabled in BIOS/UEFI
+3. **Switch CPU driver** - The `intel_pstate` or `amd-pstate` drivers may prevent proper turbo control
+4. **Check current turbo status**:
+   ```bash
+   auto-cpufreq --stats
+   ```
+
+### Suboptimal Performance
+
+If system performance is not meeting expectations:
+
+1. **Check current mode**:
+   ```bash
+   auto-cpufreq --stats
+   ```
+
+2. **Consider performance mode override**:
+   ```bash
+   sudo auto-cpufreq --force=performance
+   ```
+   <Warning>
+   Performance mode increases power consumption. Use only when maximum performance is needed.
+   </Warning>
+
+3. **Review battery/charger profiles** - Ensure your config file has appropriate settings for each power state
+
+4. **Verify no conflicts** - Check that TLP, GNOME Power Profiles, or TuneD are disabled
+
+## Checking for Conflicting Services
+
+Auto-cpufreq can conflict with other power management tools. Check if any of these are running:
+
+### TLP
+
+<Warning>
+auto-cpufreq aims to replace TLP. Using both together will lead to conflicts and potential overheating.
+</Warning>
+
+```bash
+# Check if TLP is active
+systemctl status tlp
+
+# Disable TLP if present
+sudo systemctl stop tlp
+sudo systemctl disable tlp
+sudo systemctl mask tlp
+```
+
+### GNOME Power Profiles Daemon
+
+```bash
+# Check status
+systemctl status power-profiles-daemon
+
+# Disable if active
+sudo systemctl mask power-profiles-daemon.service
+```
+
+### TuneD Daemon
+
+```bash
+# Check status
+systemctl status tuned
+
+# Disable if active
+sudo systemctl stop tuned
+sudo systemctl disable tuned
+```
+
+## Still Having Issues?
+
+If you've tried the solutions above and are still experiencing problems:
+
+1. **Use debug mode** - See [Debug Mode](/troubleshooting/debug-mode) for detailed logging
+2. **Check existing issues** - Search [existing/closed issues](https://github.com/AdnanHodzic/auto-cpufreq/issues)
+3. **Try the AI chatbot** - Use the [auto-cpufreq-genAI-chatbot](https://foolcontrol.org/?p=4903)
+4. **Join the community** - Ask on the [Discord server](https://discord.gg/Sjauxtj6kH)
+5. **Submit a bug report** - If all else fails, [open an issue](https://github.com/AdnanHodzic/auto-cpufreq/issues/new)
+
+<Info>
+When reporting issues, always include the output of `auto-cpufreq --debug` for faster diagnosis.
+</Info>

@@ -1,0 +1,431 @@
+---
+title: CPU Governors
+description: Understanding CPU frequency governors and how auto-cpufreq selects them
+---
+
+## What Are CPU Governors?
+
+CPU governors are kernel-level policies that control how the CPU frequency is scaled dynamically. They determine when to increase or decrease the CPU frequency based on system load, directly impacting performance and power consumption.
+
+<Info>
+  The Linux kernel's `cpufreq` subsystem provides the infrastructure for frequency scaling, while governors implement the actual scaling policies.
+</Info>
+
+## Available Governors
+
+The specific governors available on your system depend on your CPU architecture and kernel configuration. Common governors include:
+
+<CardGroup cols={2}>
+  <Card title="performance" icon="gauge-max">
+    **Always runs at maximum frequency**
+    
+    - Highest performance
+    - Highest power consumption
+    - No frequency scaling
+    - Best for: CPU-intensive workloads, benchmarks
+  </Card>
+  
+  <Card title="powersave" icon="battery-full">
+    **Always runs at minimum frequency**
+    
+    - Lowest power consumption
+    - May impact performance
+    - No dynamic scaling
+    - Best for: Extending battery life, idle systems
+  </Card>
+  
+  <Card title="ondemand" icon="chart-line">
+    **Scales frequency based on load**
+    
+    - Quickly ramps up to max frequency on load
+    - Gradually decreases when idle
+    - Good balance
+    - Best for: General desktop use
+  </Card>
+  
+  <Card title="conservative" icon="leaf">
+    **Gradually scales frequency**
+    
+    - Slower frequency transitions
+    - More gradual than ondemand
+    - Better for battery
+    - Best for: Battery-conscious workloads
+  </Card>
+  
+  <Card title="schedutil" icon="brain">
+    **Scheduler-driven scaling**
+    
+    - Uses kernel scheduler data
+    - More responsive to workload
+    - Modern default on many systems
+    - Best for: Modern kernels (4.7+)
+  </Card>
+  
+  <Card title="userspace" icon="user">
+    **User-controlled frequency**
+    
+    - Manual frequency control
+    - Used by userspace tools
+    - No automatic scaling
+    - Best for: Custom power management
+  </Card>
+</CardGroup>
+
+<Tip>
+  Check available governors on your system:
+  ```bash
+  cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+  ```
+</Tip>
+
+## How auto-cpufreq Selects Governors
+
+auto-cpufreq uses an intelligent selection algorithm based on power state, system load, and configuration.
+
+### Default Selection Logic
+
+The governor selection happens in `set_autofreq()` at `core.py:788-803`:
+
+<CodeGroup>
+```python core.py:788-803
+def set_autofreq():
+    """
+    set cpufreq governor based if device is charging
+    """
+    # determine which governor should be used
+    override = get_override()
+    if override == "powersave": 
+        set_powersave()
+    elif override == "performance": 
+        set_performance()
+    elif charging():
+        print("Battery is: charging\n")
+        set_performance()
+    else:
+        print("Battery is: discharging\n")
+        set_powersave()
+```
+</CodeGroup>
+
+### Governor Priority System
+
+auto-cpufreq uses a sorted list of available governors to make smart choices:
+
+<Steps>
+  <Step title="Scan Available Governors">
+    Read from `/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors`
+  </Step>
+  
+  <Step title="Sort by Performance">
+    Create sorted list with performance-oriented first, power-saving last
+  </Step>
+  
+  <Step title="Select Based on Power State">
+    - **On AC**: Use first governor in sorted list (most performance)
+    - **On Battery**: Use last governor in sorted list (most power-saving)
+  </Step>
+</Steps>
+
+<CodeGroup>
+```python Governor Selection
+# On AC power (charger)
+gov = AVAILABLE_GOVERNORS_SORTED[0]  # First = performance-oriented
+
+# On battery
+gov = AVAILABLE_GOVERNORS_SORTED[-1]  # Last = power-saving
+```
+</CodeGroup>
+
+See implementations at:
+- AC Power: `core.py:635-638`
+- Battery: `core.py:556-561`
+
+## Governor Configuration
+
+You can override the default governor selection in multiple ways:
+
+### Method 1: Configuration File
+
+Specify governors for each power state in `/etc/auto-cpufreq.conf`:
+
+<CodeGroup>
+```ini /etc/auto-cpufreq.conf
+# Settings for when connected to power
+[charger]
+governor = performance
+
+# Settings for when on battery
+[battery]
+governor = powersave
+```
+</CodeGroup>
+
+### Method 2: Command-Line Override
+
+Force a specific governor using the `--force` flag:
+
+<CodeGroup>
+```bash Force Performance
+sudo auto-cpufreq --force=performance
+```
+
+```bash Force Powersave
+sudo auto-cpufreq --force=powersave
+```
+
+```bash Reset to Auto
+sudo auto-cpufreq --force=reset
+```
+</CodeGroup>
+
+<Warning>
+  Governor overrides persist across reboots until explicitly reset.
+</Warning>
+
+### Override Storage
+
+Governor overrides are stored as pickled Python objects:
+- **Location**: `/opt/auto-cpufreq/override.pickle`
+- **Snap Location**: `/var/snap/auto-cpufreq/current/override.pickle`
+
+Implementation at `core.py:65-79`:
+
+<CodeGroup>
+```python core.py:65-79
+def get_override():
+    if os.path.isfile(governor_override_state):
+        with open(governor_override_state, "rb") as store: 
+            return load(store)
+    else: 
+        return "default"
+
+def set_override(override):
+    if override in ["powersave", "performance"]:
+        with open(governor_override_state, "wb") as store:
+            dump(override, store)
+        print(f"Set governor override to {override}")
+    elif override == "reset":
+        if os.path.isfile(governor_override_state):
+            os.remove(governor_override_state)
+        print("Governor override removed")
+```
+</CodeGroup>
+
+## Governor Application
+
+Governors are applied using the `cpufreqctl.auto-cpufreq` script:
+
+<CodeGroup>
+```bash Set Governor
+cpufreqctl.auto-cpufreq --governor --set=<governor_name>
+```
+
+```bash Check Current Governor
+cpufreqctl.auto-cpufreq --governor
+```
+</CodeGroup>
+
+This script handles the low-level system calls to change governor on all CPU cores.
+
+## Governor-Specific Behavior
+
+### Performance Governor
+
+When `performance` governor is active (`core.py:635-738`):
+
+<CardGroup cols={2}>
+  <Card title="Frequency" icon="tachometer-alt">
+    CPU locked to maximum frequency
+  </Card>
+  <Card title="EPP" icon="bolt">
+    Energy Performance Preference set to "performance"
+  </Card>
+  <Card title="Turbo Boost" icon="rocket">
+    Enabled under load (unless temp too high)
+  </Card>
+  <Card title="Latency" icon="clock">
+    Lowest possible switching latency
+  </Card>
+</CardGroup>
+
+**Use Case**: Compiling code, video rendering, gaming, benchmarks
+
+### Powersave Governor
+
+When `powersave` governor is active (`core.py:556-613`):
+
+<CardGroup cols={2}>
+  <Card title="Frequency" icon="tachometer-alt">
+    CPU at minimum frequency (may scale with some drivers)
+  </Card>
+  <Card title="EPP" icon="leaf">
+    Energy Performance Preference set to "balance_power" or "power"
+  </Card>
+  <Card title="Turbo Boost" icon="battery-quarter">
+    Disabled unless CPU load is high (≥20%)
+  </Card>
+  <Card title="Latency" icon="hourglass">
+    Higher latency acceptable for power savings
+  </Card>
+</CardGroup>
+
+**Use Case**: Maximum battery life, light tasks, background services
+
+<Note>
+  With modern Intel `intel_pstate` or AMD `amd-pstate` drivers, even the "powersave" governor can scale frequency dynamically.
+</Note>
+
+## CPU Drivers and Governors
+
+The available governors depend on your CPU scaling driver:
+
+### intel_pstate / amd-pstate
+
+Modern Intel and AMD systems use these drivers:
+
+- **Available Governors**: `performance`, `powersave`
+- **Behavior**: Even "powersave" can scale frequency dynamically
+- **Control**: Uses HWP (Hardware P-States) for hardware-level control
+- **EPP Support**: Yes (Energy Performance Preference)
+
+### acpi-cpufreq
+
+Older driver with more governor options:
+
+- **Available Governors**: `performance`, `powersave`, `ondemand`, `conservative`, `schedutil`, `userspace`
+- **Behavior**: More traditional frequency scaling
+- **Control**: Software-managed frequency scaling
+- **EPP Support**: No
+
+<Warning>
+  If you experience issues with `intel_pstate` or `amd-pstate`, you can switch to `acpi-cpufreq` by adding kernel boot parameters. See the [Troubleshooting](/troubleshooting) guide.
+</Warning>
+
+## Energy Performance Preference (EPP)
+
+On systems with modern CPU drivers, auto-cpufreq also sets EPP values:
+
+| Power State | EPP Setting | Description |
+|-------------|-------------|-------------|
+| **AC Power** | `performance` | Maximum performance, higher power |
+| **AC Power** (alternative) | `balance_performance` | Good performance, moderate power |
+| **Battery** | `balance_power` | Balanced approach |
+| **Battery** (low power) | `power` | Maximum power savings |
+
+EPP configuration is done at:
+- AC: `core.py:643-694`
+- Battery: `core.py:563-581`
+
+<Info>
+  EPP is only available on systems with `intel_pstate` (HWP mode) or `amd-pstate` (active mode) drivers.
+</Info>
+
+## Energy Performance Bias (EPB)
+
+auto-cpufreq also sets EPB for Intel systems:
+
+- **Values**: 0-15 (0 = max performance, 15 = max power saving)
+- **Charger Default**: `balance_performance` (4)
+- **Battery Default**: `balance_power` (8)
+- **Configuration**: Can be set in config file
+
+See implementation at `core.py:544-553`
+
+## Monitoring Governor Changes
+
+Watch governor changes in real-time:
+
+<CodeGroup>
+```bash Live Stats
+auto-cpufreq --stats
+```
+
+```bash Monitor Mode
+sudo auto-cpufreq --monitor
+```
+
+```bash Check Current Governor
+cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+```
+</CodeGroup>
+
+## Troubleshooting
+
+### Governor Not Available
+
+If your desired governor isn't available:
+
+1. **Check loaded kernel modules**:
+   ```bash
+   lsmod | grep cpufreq
+   ```
+
+2. **Load additional governor modules**:
+   ```bash
+   sudo modprobe cpufreq_ondemand
+   sudo modprobe cpufreq_conservative
+   ```
+
+3. **Switch CPU driver** (if needed) - see [How It Works](/concepts/how-it-works)
+
+### Governor Not Changing
+
+If the governor doesn't change:
+
+- Check for conflicting services (TLP, power-profiles-daemon)
+- Verify auto-cpufreq daemon is running: `systemctl status auto-cpufreq`
+- Check permissions on `/sys/devices/system/cpu/cpu*/cpufreq/`
+- Review logs: `journalctl -u auto-cpufreq`
+
+### Performance Issues
+
+If you experience poor performance:
+
+<Steps>
+  <Step title="Check Current Governor">
+    ```bash
+    cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+    ```
+  </Step>
+  
+  <Step title="Force Performance Mode">
+    ```bash
+    sudo auto-cpufreq --force=performance
+    ```
+  </Step>
+  
+  <Step title="Check If Overridden">
+    Look for "Warning: governor overwritten using `--force` flag" in stats
+  </Step>
+</Steps>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Default is Usually Best" icon="check">
+    Let auto-cpufreq choose governors automatically for balanced performance and power savings
+  </Card>
+  
+  <Card title="Use Config File" icon="file-code">
+    Prefer config file over command-line overrides for persistent settings
+  </Card>
+  
+  <Card title="Monitor First" icon="eye">
+    Use `--monitor` mode to see what would happen before enabling daemon
+  </Card>
+  
+  <Card title="Test Workloads" icon="flask">
+    Test your specific workloads with different governors to find optimal settings
+  </Card>
+</CardGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="How It Works" icon="gears" href="/concepts/how-it-works">
+    Learn about the core algorithm and decision-making
+  </Card>
+  <Card title="Turbo Boost" icon="rocket" href="/concepts/turbo-boost">
+    Understand turbo boost management
+  </Card>
+</CardGroup>

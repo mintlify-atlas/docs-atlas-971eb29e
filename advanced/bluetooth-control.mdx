@@ -1,0 +1,110 @@
+---
+title: Bluetooth Control
+description: Manage Bluetooth behavior on boot with auto-cpufreq
+---
+
+## Overview
+
+auto-cpufreq provides commands to control whether Bluetooth is enabled or disabled when your system boots. This is particularly useful for GNOME users who experience Bluetooth being automatically re-enabled after reboots or wake from suspend.
+
+## Why Bluetooth is Disabled on Boot
+
+When you install the auto-cpufreq daemon, **Bluetooth is disabled on boot by default**. This behavior was implemented to address power management concerns and GNOME's persistent Bluetooth behavior.
+
+### GNOME Bluetooth Behavior
+
+GNOME has a tendency to automatically enable Bluetooth on every reboot or after suspend/wake up, even if you manually disable it. This can be frustrating for users who:
+- Want to conserve battery life
+- Don't use Bluetooth regularly
+- Prefer to enable Bluetooth only when needed
+
+By disabling Bluetooth on boot, auto-cpufreq prevents GNOME from automatically turning it back on, giving you full control over when Bluetooth is active.
+
+<Note>
+Disabling Bluetooth on boot does **not** prevent you from manually enabling Bluetooth later. You can still turn on Bluetooth whenever you need it through your system settings or Bluetooth manager.
+</Note>
+
+## Commands
+
+### Disable Bluetooth on Boot
+
+To disable Bluetooth on boot (only):
+
+```bash
+sudo auto-cpufreq --bluetooth_boot_off
+```
+
+This command:
+- Disables Bluetooth when the system boots
+- Allows you to manually enable Bluetooth at any time
+- Prevents GNOME from automatically re-enabling it
+- Is executed automatically during daemon installation
+
+### Enable Bluetooth on Boot
+
+If you prefer to have Bluetooth enabled when your system starts:
+
+```bash
+sudo auto-cpufreq --bluetooth_boot_on
+```
+
+This is useful if:
+- You use Bluetooth devices regularly
+- You want Bluetooth available immediately after boot
+- You've previously disabled it and want to revert the setting
+
+<Info>
+These commands can be run independently without installing the auto-cpufreq daemon. They modify the Bluetooth configuration directly.
+</Info>
+
+## How It Works
+
+Behind the scenes, these commands modify the `/etc/bluetooth/main.conf` file by setting the `AutoEnable` parameter in the `[Policy]` section:
+
+- `--bluetooth_boot_off`: Sets `AutoEnable=false`
+- `--bluetooth_boot_on`: Sets `AutoEnable=true`
+
+The configuration is persistent across reboots and system updates.
+
+## Usage Examples
+
+<CardGroup cols={2}>
+  <Card title="Battery Life Optimization" icon="battery-full">
+    Disable Bluetooth on boot to maximize battery life, then enable it manually only when needed for wireless devices.
+  </Card>
+  <Card title="Daily Bluetooth Users" icon="bluetooth">
+    Enable Bluetooth on boot if you use wireless headphones, keyboards, or mice regularly throughout the day.
+  </Card>
+</CardGroup>
+
+## Snap Package Users
+
+If you installed auto-cpufreq via Snap, these commands have limited functionality due to Snap confinement restrictions. You'll need to use the `power_helper.py` script instead:
+
+```bash
+# Clone the repository
+git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+cd auto-cpufreq
+
+# Disable Bluetooth on boot
+sudo python3 -m auto_cpufreq.power_helper --bluetooth_boot_off
+
+# Enable Bluetooth on boot
+sudo python3 -m auto_cpufreq.power_helper --bluetooth_boot_on
+```
+
+<Warning>
+Make sure you have the required Python libraries installed:
+```bash
+sudo apt install python3-psutil python3-pyinotify
+```
+Or install them using pip:
+```bash
+sudo pip3 install psutil pyinotify --break-system-packages
+```
+</Warning>
+
+## Related Configuration
+
+- [Configuration File](/configuration/config-file) - Learn about other auto-cpufreq configuration options
+- [Installation Methods](/installation) - Compare installation methods and their limitations

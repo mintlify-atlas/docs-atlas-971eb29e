@@ -1,0 +1,356 @@
+---
+title: Installation
+description: Install auto-cpufreq on your Linux system using multiple methods
+---
+
+auto-cpufreq offers several installation methods to suit different Linux distributions and use cases. Choose the method that works best for your system.
+
+## System Requirements
+
+Before installing auto-cpufreq, ensure your system meets these requirements:
+
+- **Supported CPU Architectures**: Intel, AMD, or ARM processors
+- **Operating System**: Linux (any distribution)
+- **Device Type**: Primarily designed for laptops, but also works on desktops and servers
+- **Python**: Version 3.9 or higher
+- **Root Access**: Required for installation and daemon operation
+
+<Warning>
+auto-cpufreq aims to replace TLP in terms of CPU frequency management. After installing auto-cpufreq, it's recommended to remove TLP to avoid conflicts and issues like overheating. Only use both tools together if you know what you're doing.
+</Warning>
+
+<Note>
+auto-cpufreq does not conflict with [thermald](https://wiki.debian.org/thermald) and can run alongside it.
+</Note>
+
+## Installation Methods
+
+<CardGroup cols={2}>
+  <Card title="auto-cpufreq-installer" icon="terminal" href="#auto-cpufreq-installer">
+    Recommended for most users. Installs from source with full GUI support.
+  </Card>
+  <Card title="Snap Store" icon="cube" href="#snap-store">
+    Quick installation via Snap. Note: GUI not available due to confinement.
+  </Card>
+  <Card title="AUR (Arch Linux)" icon="box" href="#aur-arch-based-distributions">
+    For Arch-based distributions using AUR helpers.
+  </Card>
+  <Card title="NixOS" icon="snowflake" href="#nixos">
+    Flake-based installation for NixOS users.
+  </Card>
+</CardGroup>
+
+## auto-cpufreq-installer
+
+<Note>
+This is the **recommended installation method** for most users as it provides full functionality including the GUI.
+</Note>
+
+The installer automatically detects your distribution and installs all required dependencies.
+
+<Warning>
+auto-cpufreq relies on git-based versioning. Always install using `git clone` - downloading source code as a zip file will cause build errors.
+</Warning>
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Run the installer">
+    ```bash
+    sudo ./auto-cpufreq-installer
+    ```
+    
+    The installer will:
+    - Detect your Linux distribution
+    - Install required system packages
+    - Set up a Python virtual environment
+    - Install auto-cpufreq and all dependencies
+    - Set up desktop integration files
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    auto-cpufreq --version
+    ```
+  </Step>
+</Steps>
+
+### What Gets Installed
+
+The installer sets up:
+- Python virtual environment in `/opt/auto-cpufreq/venv`
+- Binary wrapper in `/usr/local/bin/auto-cpufreq`
+- GUI launcher in `/usr/local/bin/auto-cpufreq-gtk`
+- Desktop entry for GUI access
+- Supporting scripts in `/usr/local/share/auto-cpufreq/`
+- Icon files in `/usr/share/pixmaps/`
+
+### Supported Distributions
+
+The installer automatically handles:
+- Debian-based (Ubuntu, Linux Mint, Pop!_OS, etc.)
+- RedHat-based (Fedora, CentOS, RHEL)
+- Arch Linux
+- OpenSUSE (Leap and Tumbleweed)
+- Void Linux
+- Solus
+- Gentoo (via GURU repository)
+
+## Snap Store
+
+<Warning>
+While all CLI functionality works with the Snap package, the GUI is not available due to Snap confinement limitations. Consider using [auto-cpufreq-installer](#auto-cpufreq-installer) for full functionality.
+</Warning>
+
+Install from the Snap Store:
+
+```bash
+sudo snap install auto-cpufreq
+```
+
+### Requirements
+- snapd installed and `snap version` >= 2.44
+
+### Known Limitations
+
+**Fedora users** may encounter cgroups v2 errors. Solutions:
+- Run `sudo snap run auto-cpufreq` after installation, or
+- Use the [auto-cpufreq-installer](#auto-cpufreq-installer) instead
+
+**Power profile daemon conflicts**: Since Snap packages run in a confined environment, you must manually disable conflicting services using the `power_helper.py` script. See the [configuration guide](/configuration/config-file) for details.
+
+## AUR (Arch-based distributions)
+
+[![AUR version](https://img.shields.io/aur/version/auto-cpufreq)](https://aur.archlinux.org/packages/auto-cpufreq)
+
+Install using your preferred AUR helper:
+
+<CodeGroup>
+```bash yay
+yay -S auto-cpufreq
+```
+
+```bash paru
+paru -S auto-cpufreq
+```
+
+```bash makepkg
+git clone https://aur.archlinux.org/auto-cpufreq.git
+cd auto-cpufreq
+makepkg -si
+```
+</CodeGroup>
+
+### Post-Installation Steps
+
+Unlike the installer method, the AUR package requires manual service management:
+
+<Steps>
+  <Step title="Disable conflicting services">
+    The GNOME Power Profiles daemon must be manually disabled:
+    ```bash
+    sudo systemctl mask power-profiles-daemon.service
+    ```
+    
+    On Fedora 41+, also disable TuneD:
+    ```bash
+    sudo systemctl mask tuned.service
+    ```
+  </Step>
+  
+  <Step title="Enable and start auto-cpufreq">
+    ```bash
+    sudo systemctl enable --now auto-cpufreq
+    ```
+  </Step>
+</Steps>
+
+<Note>
+The AUR build process links to `/usr/share/` instead of `/usr/local/share/`.
+</Note>
+
+## Gentoo Linux (GURU Repository)
+
+For Gentoo users, auto-cpufreq is available in the GURU repository:
+
+<Steps>
+  <Step title="Add GURU repository">
+    ```bash
+    sudo eselect repository enable guru
+    sudo emaint sync -r guru
+    ```
+  </Step>
+  
+  <Step title="Unmask the package">
+    ```bash
+    echo "sys-power/auto-cpufreq ~amd64" | sudo tee -a /etc/portage/package.accept_keywords
+    ```
+  </Step>
+  
+  <Step title="Install auto-cpufreq">
+    ```bash
+    sudo emerge --ask auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Enable the service">
+    <CodeGroup>
+    ```bash systemd
+    sudo systemctl enable --now auto-cpufreq
+    ```
+    
+    ```bash OpenRC
+    sudo rc-update add auto-cpufreq default
+    sudo rc-service auto-cpufreq start
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## NixOS
+
+### Using Flakes (Recommended)
+
+Add auto-cpufreq to your `flake.nix`:
+
+```nix
+# flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    auto-cpufreq = {
+      url = "github:AdnanHodzic/auto-cpufreq";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = {nixpkgs, auto-cpufreq, ...}: {
+    nixosConfigurations.HOSTNAME = nixpkgs.lib.nixosSystem {
+      modules = [
+        ./configuration.nix
+        auto-cpufreq.nixosModules.default
+      ];
+    };
+  };
+}
+```
+
+Then enable in your `configuration.nix`:
+
+```nix
+# configuration.nix
+{
+  programs.auto-cpufreq.enable = true;
+  
+  # Optional: Configure settings
+  programs.auto-cpufreq.settings = {
+    charger = {
+      governor = "performance";
+      turbo = "auto";
+    };
+    battery = {
+      governor = "powersave";
+      turbo = "auto";
+    };
+  };
+}
+```
+
+### Using Nixpkgs
+
+<Warning>
+The nixpkgs version may be outdated. The flake method is recommended as it pulls from the latest commit.
+</Warning>
+
+```nix
+# configuration.nix
+environment.systemPackages = with pkgs; [
+  auto-cpufreq
+];
+
+services.auto-cpufreq.enable = true;
+```
+
+## Development Installation
+
+For developers who want to contribute or test the latest changes:
+
+### Using Poetry
+
+```bash
+git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+cd auto-cpufreq
+poetry install
+poetry run auto-cpufreq --help
+```
+
+#### With GUI Support
+
+```bash
+poetry install --extras gui
+poetry run auto-cpufreq-gtk
+```
+
+### Using pip (Editable Install)
+
+```bash
+git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+cd auto-cpufreq
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -e .
+auto-cpufreq --help
+```
+
+<Note>
+Regularly run `poetry update` if you encounter inconsistent lock file issues.
+</Note>
+
+## Next Steps
+
+After installation, auto-cpufreq is available as a command-line tool. Continue to the [Quick Start Guide](/quickstart) to learn how to use auto-cpufreq.
+
+## Uninstallation
+
+To remove auto-cpufreq:
+
+### auto-cpufreq-installer Method
+
+```bash
+cd auto-cpufreq
+sudo ./auto-cpufreq-installer --remove
+```
+
+Or run the installer again and select the remove option:
+
+```bash
+sudo ./auto-cpufreq-installer
+# Select [R]emove when prompted
+```
+
+### Snap Method
+
+```bash
+sudo snap remove auto-cpufreq
+```
+
+### AUR Method
+
+```bash
+sudo systemctl stop auto-cpufreq
+sudo systemctl disable auto-cpufreq
+yay -R auto-cpufreq  # or your AUR helper
+```
+
+### NixOS Method
+
+Remove the configuration from your `configuration.nix` and rebuild:
+
+```bash
+sudo nixos-rebuild switch
+```

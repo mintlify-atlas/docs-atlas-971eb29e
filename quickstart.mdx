@@ -1,80 +1,200 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quick Start"
+description: "Get auto-cpufreq running in minutes"
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+This guide will help you install and start using auto-cpufreq to optimize your Linux laptop's battery life and performance.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+Before installing auto-cpufreq, ensure you have:
+
+- A Linux system with Intel, AMD, or ARM CPU
+- `sudo` access
+- Git installed
+- Python 3.9 or higher
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/AdnanHodzic/auto-cpufreq.git
+    cd auto-cpufreq
+    ```
+  </Step>
+  
+  <Step title="Run the installer">
+    ```bash
+    sudo ./auto-cpufreq-installer
+    ```
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    The installer will:
+    - Install auto-cpufreq and its dependencies
+    - Set up the binary in `/usr/local/bin/`
+    - Configure the system for optimal operation
+  </Step>
+  
+  <Step title="Test with monitor mode">
+    Before installing the daemon, preview what auto-cpufreq will do:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    ```bash
+    sudo auto-cpufreq --monitor
+    ```
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    This shows optimization suggestions without making any changes.
+  </Step>
+  
+  <Step title="Install the daemon">
+    Once you're satisfied with the preview, install the daemon for permanent optimizations:
+    
+    ```bash
+    sudo auto-cpufreq --install
+    ```
+    
+    The daemon will now:
+    - Start automatically on boot
+    - Continuously optimize CPU performance and power usage
+    - Adapt to battery vs AC power state
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Verify Installation
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Check that the daemon is running:
 
-### Step 3: Go live
+```bash
+# Check service status
+systemctl status auto-cpufreq
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+# View live statistics
+auto-cpufreq --stats
+```
 
-## Next steps
-
-Now that you have your docs running, explore these key features:
+## Basic Usage
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Monitor Mode" icon="eye" href="/commands/monitor">
+    Preview optimizations without making changes
+  </Card>
+  <Card title="Live Mode" icon="circle-play" href="/commands/live">
+    Apply temporary optimizations for testing
+  </Card>
+  <Card title="Stats" icon="chart-line" href="/commands/stats">
+    View live statistics from the daemon
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration/config-file">
+    Customize auto-cpufreq behavior
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Common First Steps
+
+### 1. Check Current Status
+
+```bash
+auto-cpufreq --stats
+```
+
+This shows:
+- Current CPU frequency and governor
+- Battery state
+- Temperature
+- What optimizations are being applied
+
+### 2. Configure for Your Needs
+
+Create a configuration file at `/etc/auto-cpufreq.conf`:
+
+```ini
+[charger]
+governor = performance
+turbo = auto
+
+[battery]
+governor = powersave
+turbo = auto
+```
+
+Then restart the daemon:
+
+```bash
+sudo systemctl restart auto-cpufreq
+```
+
+### 3. Monitor Battery Life
+
+Track your battery usage over a few days to see the improvement. Most users report 20-30% longer battery life.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Service won't start">
+    Check for conflicting services:
+    ```bash
+    systemctl status power-profiles-daemon
+    systemctl status tlp
+    ```
+    
+    Disable them:
+    ```bash
+    sudo systemctl mask power-profiles-daemon
+    sudo systemctl disable --now tlp
+    ```
+  </Accordion>
+  
+  <Accordion title="CPU not scaling properly">
+    Try switching CPU drivers. Edit `/etc/default/grub`:
+    ```
+    GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_pstate=disable"
+    ```
+    
+    Then:
+    ```bash
+    sudo update-grub
+    sudo reboot
+    ```
+  </Accordion>
+  
+  <Accordion title="High temperatures">
+    Check if turbo boost is disabled on battery:
+    ```bash
+    auto-cpufreq --stats
+    ```
+    
+    If needed, force turbo off:
+    ```bash
+    sudo auto-cpufreq --turbo=never
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Command Reference" icon="terminal" href="/commands/overview">
+    Explore all available commands
+  </Card>
+  <Card title="Configuration Guide" icon="file-lines" href="/configuration/config-file">
+    Customize auto-cpufreq settings
+  </Card>
+  <Card title="Installation Methods" icon="download" href="/installation/auto-installer">
+    Learn about different installation options
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/troubleshooting/common-issues">
+    Solve common problems
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+<Info>
+Try the [auto-cpufreq GenAI chatbot](https://foolcontrol.org/?p=4903) for instant answers to common questions.
+</Info>
+
+For more help:
+- [GitHub Discussions](https://github.com/AdnanHodzic/auto-cpufreq/discussions)
+- [Discord Community](https://discord.gg/Sjauxtj6kH)
+- [GitHub Issues](https://github.com/AdnanHodzic/auto-cpufreq/issues)

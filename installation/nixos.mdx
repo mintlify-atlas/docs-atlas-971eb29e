@@ -1,0 +1,358 @@
+---
+title: NixOS
+description: Install and configure auto-cpufreq on NixOS using Flakes or Nixpkgs
+---
+
+auto-cpufreq can be installed on NixOS using either Flakes (recommended) or the traditional Nixpkgs method.
+
+<Warning>
+  The auto-cpufreq-installer script is not supported on NixOS. Use the methods described below instead.
+</Warning>
+
+## Installation with Flakes (Recommended)
+
+Flakes provide the most up-to-date version of auto-cpufreq, pulling from the latest commit.
+
+### Prerequisites
+
+- NixOS with Flakes enabled
+- Basic familiarity with NixOS configuration
+
+### Installation Steps
+
+<Steps>
+  <Step title="Add auto-cpufreq as a flake input">
+    Edit your `flake.nix` file to include auto-cpufreq as an input:
+
+    ```nix
+    # flake.nix
+
+    {
+        inputs = {
+            nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+            
+            auto-cpufreq = {
+                url = "github:AdnanHodzic/auto-cpufreq";
+                inputs.nixpkgs.follows = "nixpkgs";
+            };
+        };
+
+        outputs = {nixpkgs, auto-cpufreq, ...} @ inputs: {
+            nixosConfigurations.HOSTNAME = nixpkgs.lib.nixosSystem {
+                specialArgs = { inherit inputs; };
+                modules = [
+                    ./configuration.nix
+                    auto-cpufreq.nixosModules.default
+                ];
+            };
+        };
+    }
+    ```
+
+    Replace `HOSTNAME` with your system's hostname.
+  </Step>
+
+  <Step title="Enable auto-cpufreq in configuration.nix">
+    Edit your `configuration.nix` to enable the program:
+
+    ```nix
+    # configuration.nix
+
+    {inputs, pkgs, ...}: {
+        # Enable auto-cpufreq
+        programs.auto-cpufreq.enable = true;
+    }
+    ```
+  </Step>
+
+  <Step title="(Optional) Configure settings">
+    You can configure auto-cpufreq settings directly in your NixOS configuration:
+
+    ```nix
+    # configuration.nix
+
+    {inputs, pkgs, ...}: {
+        programs.auto-cpufreq.enable = true;
+        
+        programs.auto-cpufreq.settings = {
+            charger = {
+                governor = "performance";
+                turbo = "auto";
+            };
+
+            battery = {
+                governor = "powersave";
+                turbo = "auto";
+            };
+        };
+    }
+    ```
+  </Step>
+
+  <Step title="Rebuild your system">
+    Apply the changes by rebuilding your NixOS system:
+
+    ```bash
+    sudo nixos-rebuild switch --flake .#HOSTNAME
+    ```
+  </Step>
+</Steps>
+
+## Installation with Nixpkgs
+
+The Nixpkgs method is simpler but may provide an older version of auto-cpufreq.
+
+<Note>
+  The Nixpkgs package is more prone to being outdated compared to the Flakes method.
+</Note>
+
+### Installation Steps
+
+<Steps>
+  <Step title="Add auto-cpufreq to system packages">
+    Edit your `configuration.nix`:
+
+    ```nix
+    # configuration.nix
+
+    { config, pkgs, ... }:
+
+    {
+        environment.systemPackages = with pkgs; [
+            auto-cpufreq
+        ];
+    }
+    ```
+  </Step>
+
+  <Step title="Enable the service">
+    Enable the auto-cpufreq service:
+
+    ```nix
+    # configuration.nix
+
+    {
+        services.auto-cpufreq.enable = true;
+    }
+    ```
+  </Step>
+
+  <Step title="Rebuild your system">
+    Apply the changes:
+
+    ```bash
+    sudo nixos-rebuild switch
+    ```
+  </Step>
+</Steps>
+
+## Configuration Options
+
+When using Flakes, you can configure auto-cpufreq directly in your NixOS configuration. Here are all available options:
+
+### Basic Configuration
+
+```nix
+programs.auto-cpufreq.settings = {
+    charger = {
+        governor = "performance";
+        turbo = "auto";
+    };
+
+    battery = {
+        governor = "powersave";
+        turbo = "auto";
+    };
+};
+```
+
+### Advanced Configuration
+
+```nix
+programs.auto-cpufreq.settings = {
+    charger = {
+        governor = "performance";
+        energy_performance_preference = "performance";
+        scaling_min_freq = 800000;  # 800 MHz in kHz
+        scaling_max_freq = 3500000; # 3.5 GHz in kHz
+        turbo = "auto";
+    };
+
+    battery = {
+        governor = "powersave";
+        energy_performance_preference = "power";
+        scaling_min_freq = 800000;
+        scaling_max_freq = 2000000; # 2 GHz in kHz
+        turbo = "auto";
+    };
+};
+```
+
+### Battery Threshold Configuration
+
+```nix
+programs.auto-cpufreq.settings = {
+    battery = {
+        governor = "powersave";
+        turbo = "auto";
+        enable_thresholds = true;
+        start_threshold = 20;
+        stop_threshold = 80;
+    };
+};
+```
+
+## Verifying Installation
+
+After rebuilding your system, verify that auto-cpufreq is running:
+
+```bash
+# Check service status
+systemctl status auto-cpufreq
+
+# View auto-cpufreq stats
+auto-cpufreq --stats
+```
+
+## Configuration File Location
+
+NixOS stores the auto-cpufreq configuration in:
+
+```
+/etc/auto-cpufreq.conf
+```
+
+This file is automatically generated from your NixOS configuration.
+
+## Common Configuration Examples
+
+<CardGroup cols={2}>
+  <Card title="Maximum Performance" icon="rocket">
+    ```nix
+    programs.auto-cpufreq.settings = {
+        charger.governor = "performance";
+        charger.turbo = "always";
+        battery.governor = "performance";
+        battery.turbo = "auto";
+    };
+    ```
+  </Card>
+  <Card title="Maximum Battery Life" icon="battery-full">
+    ```nix
+    programs.auto-cpufreq.settings = {
+        charger.governor = "powersave";
+        charger.turbo = "auto";
+        battery.governor = "powersave";
+        battery.turbo = "never";
+    };
+    ```
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Service fails to start
+
+Check the system logs:
+
+```bash
+journalctl -u auto-cpufreq -xe
+```
+
+### Configuration changes not applied
+
+Make sure to rebuild your system after making changes:
+
+```bash
+sudo nixos-rebuild switch --flake .#HOSTNAME
+```
+
+### Conflicts with other power management tools
+
+Disable conflicting services in your NixOS configuration:
+
+```nix
+# Disable GNOME Power Profiles daemon
+services.power-profiles-daemon.enable = false;
+
+# Disable TLP
+services.tlp.enable = false;
+```
+
+### Checking effective configuration
+
+View the generated configuration file:
+
+```bash
+cat /etc/auto-cpufreq.conf
+```
+
+## Updating
+
+### Flakes Installation
+
+Update the flake input:
+
+```bash
+nix flake update auto-cpufreq
+sudo nixos-rebuild switch --flake .#HOSTNAME
+```
+
+### Nixpkgs Installation
+
+Update your system packages:
+
+```bash
+sudo nix-channel --update
+sudo nixos-rebuild switch
+```
+
+## Uninstalling
+
+### Flakes Installation
+
+<Steps>
+  <Step title="Disable in configuration.nix">
+    ```nix
+    programs.auto-cpufreq.enable = false;
+    ```
+  </Step>
+
+  <Step title="Remove from flake inputs">
+    Remove the auto-cpufreq input from your `flake.nix` and the module from your configuration.
+  </Step>
+
+  <Step title="Rebuild">
+    ```bash
+    sudo nixos-rebuild switch --flake .#HOSTNAME
+    ```
+  </Step>
+</Steps>
+
+### Nixpkgs Installation
+
+<Steps>
+  <Step title="Disable service and remove package">
+    ```nix
+    services.auto-cpufreq.enable = false;
+    # Remove auto-cpufreq from environment.systemPackages
+    ```
+  </Step>
+
+  <Step title="Rebuild">
+    ```bash
+    sudo nixos-rebuild switch
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Advanced Configuration" icon="gears" href="/configuration">
+    Learn about all available configuration options
+  </Card>
+  <Card title="Monitor Performance" icon="chart-line" href="/commands/stats">
+    View CPU optimization statistics
+  </Card>
+</CardGroup>

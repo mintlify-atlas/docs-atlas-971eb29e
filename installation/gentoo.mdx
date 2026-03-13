@@ -1,0 +1,354 @@
+---
+title: Gentoo Linux
+description: Install auto-cpufreq on Gentoo using the GURU repository
+---
+
+auto-cpufreq is available on Gentoo Linux through the GURU (Gentoo User Repository Unsupported) repository, Gentoo's official community-maintained ebuild repository.
+
+<Note>
+  The [ebuild](https://github.com/gentoo-mirror/guru/tree/master/sys-power/auto-cpufreq) is maintained by [S41G0N](https://github.com/S41G0N) and other [GURU contributors](https://bugs.gentoo.org).
+</Note>
+
+## Prerequisites
+
+- Gentoo Linux system
+- Root access
+- GURU repository enabled
+
+## Installation Steps
+
+<Steps>
+  <Step title="Unmask the package">
+    Add the ~amd64 keyword to unmask auto-cpufreq:
+
+    ```bash
+    sudo echo "sys-power/auto-cpufreq ~amd64" >> /etc/portage/package.accept_keywords
+    ```
+
+    For other architectures, replace `~amd64` with your architecture (e.g., `~arm64`, `~x86`).
+  </Step>
+
+  <Step title="Enable GURU repository">
+    Enable the GURU repository using eselect:
+
+    ```bash
+    sudo eselect repository enable guru
+    ```
+  </Step>
+
+  <Step title="Sync the repository">
+    Sync GURU to download the latest ebuilds:
+
+    ```bash
+    sudo emaint sync -r guru
+    ```
+
+    Or sync all repositories:
+
+    ```bash
+    sudo emerge --sync
+    ```
+  </Step>
+
+  <Step title="Install auto-cpufreq">
+    Install the package using emerge:
+
+    ```bash
+    sudo emerge --ask sys-power/auto-cpufreq
+    ```
+
+    Portage will automatically resolve and install all required dependencies.
+  </Step>
+</Steps>
+
+## Post-Installation
+
+Gentoo's auto-cpufreq ebuild supports both systemd and OpenRC init systems.
+
+### For systemd
+
+<Steps>
+  <Step title="Enable and start the service">
+    ```bash
+    sudo systemctl enable --now auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Verify service status">
+    ```bash
+    systemctl status auto-cpufreq
+    ```
+  </Step>
+</Steps>
+
+### For OpenRC
+
+<Steps>
+  <Step title="Add to default runlevel">
+    ```bash
+    sudo rc-update add auto-cpufreq default
+    ```
+  </Step>
+
+  <Step title="Start the service">
+    ```bash
+    sudo rc-service auto-cpufreq start
+    ```
+  </Step>
+
+  <Step title="Check service status">
+    ```bash
+    rc-service auto-cpufreq status
+    ```
+  </Step>
+</Steps>
+
+## Gentoo-Specific Details
+
+<CardGroup cols={2}>
+  <Card title="Installation Path" icon="folder">
+    Links to `/usr/share/` instead of `/usr/local/share/`
+  </Card>
+  <Card title="Init System Support" icon="server">
+    Works with both systemd and OpenRC
+  </Card>
+  <Card title="Daemon Installer" icon="check">
+    The built-in daemon installer works but systemctl/rc-update is recommended
+  </Card>
+  <Card title="USE Flags" icon="flag">
+    Check available USE flags with `emerge -pv auto-cpufreq`
+  </Card>
+</CardGroup>
+
+## Configuration
+
+Create or edit the configuration file:
+
+```bash
+sudo nano /etc/auto-cpufreq.conf
+```
+
+Example configuration:
+
+```ini
+[charger]
+governor = performance
+turbo = auto
+
+[battery]
+governor = powersave
+turbo = auto
+```
+
+After making changes, restart the service:
+
+<Tabs>
+  <Tab title="systemd">
+    ```bash
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="OpenRC">
+    ```bash
+    sudo rc-service auto-cpufreq restart
+    ```
+  </Tab>
+</Tabs>
+
+## Daemon Management
+
+While you can use the built-in daemon installer (`auto-cpufreq --install`), it's recommended to use your init system's service management:
+
+<Warning>
+  Using `auto-cpufreq --install` may interfere with Portage's package management. Use systemctl or rc-update instead.
+</Warning>
+
+### Recommended Method
+
+<Tabs>
+  <Tab title="systemd">
+    ```bash
+    # Enable and start
+    sudo systemctl enable --now auto-cpufreq
+
+    # Stop
+    sudo systemctl stop auto-cpufreq
+
+    # Disable
+    sudo systemctl disable auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="OpenRC">
+    ```bash
+    # Add to default runlevel and start
+    sudo rc-update add auto-cpufreq default
+    sudo rc-service auto-cpufreq start
+
+    # Stop
+    sudo rc-service auto-cpufreq stop
+
+    # Remove from default runlevel
+    sudo rc-update del auto-cpufreq default
+    ```
+  </Tab>
+</Tabs>
+
+## Updating
+
+Update auto-cpufreq along with your system:
+
+```bash
+# Sync repositories
+sudo emerge --sync
+
+# Update world
+sudo emerge --ask --update --deep --newuse @world
+```
+
+Or update just auto-cpufreq:
+
+```bash
+sudo emerge --ask --update sys-power/auto-cpufreq
+```
+
+After updating, restart the service:
+
+<Tabs>
+  <Tab title="systemd">
+    ```bash
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Tab>
+  <Tab title="OpenRC">
+    ```bash
+    sudo rc-service auto-cpufreq restart
+    ```
+  </Tab>
+</Tabs>
+
+## Uninstalling
+
+<Steps>
+  <Step title="Stop and disable the service">
+    <Tabs>
+      <Tab title="systemd">
+        ```bash
+        sudo systemctl stop auto-cpufreq
+        sudo systemctl disable auto-cpufreq
+        ```
+      </Tab>
+      <Tab title="OpenRC">
+        ```bash
+        sudo rc-service auto-cpufreq stop
+        sudo rc-update del auto-cpufreq default
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Remove the package">
+    ```bash
+    sudo emerge --ask --depclean sys-power/auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Clean up dependencies">
+    ```bash
+    sudo emerge --ask --depclean
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Package is masked
+
+If you see a masked package error, ensure you've added the keyword:
+
+```bash
+echo "sys-power/auto-cpufreq ~amd64" | sudo tee -a /etc/portage/package.accept_keywords
+```
+
+### GURU repository not found
+
+Ensure the GURU repository is properly enabled:
+
+```bash
+# List enabled repositories
+eselect repository list
+
+# Enable GURU if not enabled
+sudo eselect repository enable guru
+
+# Sync
+sudo emaint sync -r guru
+```
+
+### Service fails to start
+
+Check the logs:
+
+<Tabs>
+  <Tab title="systemd">
+    ```bash
+    journalctl -u auto-cpufreq -xe
+    ```
+  </Tab>
+  <Tab title="OpenRC">
+    ```bash
+    # Check logs in /var/log/
+    tail -f /var/log/messages
+    ```
+  </Tab>
+</Tabs>
+
+### Dependency conflicts
+
+If you encounter dependency conflicts during installation:
+
+```bash
+# Try with --autounmask-write
+sudo emerge --ask --autounmask-write sys-power/auto-cpufreq
+
+# Then apply the changes
+sudo etc-update
+
+# And try installing again
+sudo emerge --ask sys-power/auto-cpufreq
+```
+
+### Checking ebuild information
+
+View detailed package information:
+
+```bash
+# Show package details
+emerge -pv sys-power/auto-cpufreq
+
+# Show USE flags
+equery uses sys-power/auto-cpufreq
+
+# View ebuild contents
+equery files sys-power/auto-cpufreq
+```
+
+## Reporting Issues
+
+For Gentoo-specific issues with the ebuild:
+
+- Check the [GURU GitHub repository](https://github.com/gentoo-mirror/guru/tree/master/sys-power/auto-cpufreq)
+- Report issues to [Gentoo Bugs](https://bugs.gentoo.org)
+- Contact the maintainer [S41G0N](https://github.com/S41G0N)
+
+For auto-cpufreq functionality issues, report to the [auto-cpufreq repository](https://github.com/AdnanHodzic/auto-cpufreq/issues).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Settings" icon="sliders" href="/configuration">
+    Customize auto-cpufreq for your needs
+  </Card>
+  <Card title="View Statistics" icon="chart-bar" href="/commands/stats">
+    Monitor CPU optimizations
+  </Card>
+</CardGroup>

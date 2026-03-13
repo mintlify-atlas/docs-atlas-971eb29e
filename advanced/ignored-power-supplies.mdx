@@ -1,0 +1,290 @@
+---
+title: Ignored Power Supplies
+description: Prevent controllers, headphones, and other devices from affecting auto-cpufreq's power management decisions
+---
+
+## Overview
+
+By default, auto-cpufreq monitors all power supplies on your system to determine whether you're running on battery or charger power. However, many devices like game controllers, wireless headphones, and other peripherals appear as power supplies in Linux, which can cause auto-cpufreq to incorrectly think your laptop is on battery power when it's actually plugged in.
+
+The power supply ignore list allows you to tell auto-cpufreq to **disregard specific devices** when making power management decisions.
+
+## Why You Might Need This
+
+Without ignoring certain power supplies, you may experience:
+
+<CardGroup cols={2}>
+  <Card title="Performance Throttling" icon="gauge-low">
+    Your laptop switches to battery-optimized settings (lower performance) even when plugged in, because a controller is low on battery.
+  </Card>
+  <Card title="Inconsistent Behavior" icon="shuffle">
+    auto-cpufreq constantly switches between battery and charger profiles as devices connect/disconnect or their battery levels change.
+  </Card>
+  <Card title="Unnecessary Power Saving" icon="bolt">
+    Performance is reduced when you need it most (e.g., during gaming) because your controller is detected as a power supply.
+  </Card>
+  <Card title="Governor Confusion" icon="circle-question">
+    The wrong CPU governor is applied based on peripheral device battery status rather than your actual laptop power state.
+  </Card>
+</CardGroup>
+
+## Common Devices to Ignore
+
+Typical devices that should be in your ignore list:
+
+- **Game Controllers**: Xbox controllers, PlayStation controllers, Steam controllers
+- **Wireless Headphones**: Bluetooth headsets and earbuds
+- **Wireless Mice**: Battery-powered wireless mice
+- **Wireless Keyboards**: Bluetooth or USB wireless keyboards
+- **Other Peripherals**: Any battery-powered accessory that connects to your laptop
+
+<Warning>
+Do **NOT** ignore your laptop's actual battery! Only ignore peripheral devices that shouldn't affect your laptop's power management.
+</Warning>
+
+## Finding Power Supply Names
+
+To find the names of power supplies on your system:
+
+```bash
+ls /sys/class/power_supply/
+```
+
+Example output:
+```
+AC  BAT0  hid-dc:2c:26:b5:c6:ab-battery
+```
+
+In this example:
+- `AC` - Your laptop's AC adapter (charger)
+- `BAT0` - Your laptop's main battery (**do not ignore**)
+- `hid-dc:2c:26:b5:c6:ab-battery` - A connected device (e.g., wireless controller)
+
+### Identifying Device Names
+
+You can check what each power supply represents:
+
+```bash
+# Check the model name
+cat /sys/class/power_supply/DEVICE_NAME/model_name
+
+# Check the type
+cat /sys/class/power_supply/DEVICE_NAME/type
+
+# Check current status
+cat /sys/class/power_supply/DEVICE_NAME/status
+```
+
+## Configuration Syntax
+
+Add a `[power_supply_ignore_list]` section to your auto-cpufreq configuration file with the names of devices to ignore.
+
+### Configuration File Location
+
+- System-wide: `/etc/auto-cpufreq.conf`
+- User-specific: `$XDG_CONFIG_HOME/auto-cpufreq/auto-cpufreq.conf`
+- Custom path: Use `--config <FILE>` flag
+
+### Basic Example
+
+```ini /etc/auto-cpufreq.conf
+[power_supply_ignore_list]
+# Each entry can have any name (left side)
+# The right side must match the actual power supply name
+
+xbox_controller = hid-dc:2c:26:b5:c6:ab-battery
+wireless_headset = hid-aa:bb:cc:dd:ee:ff-battery
+```
+
+<Info>
+The names on the **left side** (before `=`) are just labels for your reference and can be anything. The names on the **right side** (after `=`) must exactly match the power supply names from `/sys/class/power_supply/`.
+</Info>
+
+## Complete Configuration Examples
+
+### Gaming Setup
+
+Configuration for a gaming laptop with Xbox controller and wireless headset:
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+governor = performance
+platform_profile = performance
+scaling_max_freq = 4000000
+turbo = auto
+
+[battery]
+governor = powersave
+platform_profile = low-power
+scaling_max_freq = 2000000
+turbo = auto
+
+# Ignore gaming peripherals
+[power_supply_ignore_list]
+xbox_controller = hid-dc:2c:26:b5:c6:ab-battery
+wireless_headset = hid-11:22:33:44:55:66-battery
+```
+
+### Office Setup
+
+Configuration for an office laptop with wireless mouse and keyboard:
+
+```ini /etc/auto-cpufreq.conf
+[charger]
+governor = performance
+turbo = auto
+
+[battery]
+governor = powersave
+turbo = never
+
+# Ignore wireless peripherals
+[power_supply_ignore_list]
+wireless_mouse = hid-aa:bb:cc:dd:ee:ff-battery
+wireless_keyboard = hid-ff:ee:dd:cc:bb:aa-battery
+```
+
+### Multiple Controllers
+
+If you have multiple devices of the same type:
+
+```ini /etc/auto-cpufreq.conf
+[power_supply_ignore_list]
+xbox_controller_1 = hid-dc:2c:26:b5:c6:ab-battery
+xbox_controller_2 = hid-dc:2c:26:b5:c6:cd-battery
+ps5_controller = hid-aa:bb:cc:dd:ee:ff-battery
+wireless_headset = hid-11:22:33:44:55:66-battery
+```
+
+## Configuration from README Example
+
+Here's the example from the auto-cpufreq config file with explanatory comments:
+
+```ini
+# This section is for ignoring controllers and other connected devices' 
+# batteries from affecting laptop performance
+[power_supply_ignore_list]
+
+# The format is: label = actual_power_supply_name
+name1 = this
+name2 = is 
+name3 = an
+name4 = example
+
+# Real example: ignore Xbox controller
+xboxctrl = hid-dc:2c:26:b5:c6:ab-battery
+```
+
+<Note>
+The left side can be any descriptive name you choose. Use names that help you remember what device you're ignoring.
+</Note>
+
+## Apply Configuration Changes
+
+After adding devices to your ignore list:
+
+```bash
+# Restart the auto-cpufreq daemon
+sudo systemctl restart auto-cpufreq
+
+# Verify the configuration is working
+auto-cpufreq --stats
+```
+
+## How It Works
+
+1. **Power Supply Detection**: auto-cpufreq scans `/sys/class/power_supply/` for all available power supplies
+
+2. **Filter Ignored Devices**: Any devices listed in `[power_supply_ignore_list]` are excluded from consideration
+
+3. **Power State Determination**: auto-cpufreq determines battery vs. charger state based only on non-ignored power supplies
+
+4. **Profile Application**: The appropriate configuration profile (battery or charger) is applied based on the filtered power state
+
+## Troubleshooting
+
+### Controller Still Affecting Performance
+
+**Issue**: Your controller is still causing auto-cpufreq to switch to battery mode
+
+**Solutions**:
+
+1. **Verify the exact device name**:
+   ```bash
+   ls /sys/class/power_supply/
+   ```
+   Copy the name exactly as shown (case-sensitive, including hyphens and colons)
+
+2. **Check configuration syntax**:
+   ```ini
+   # Correct
+   controller = hid-dc:2c:26:b5:c6:ab-battery
+   
+   # Incorrect (typo in device name)
+   controller = hid-dc:2c:26:b5:c6:ab_battery
+   ```
+
+3. **Restart the daemon**:
+   ```bash
+   sudo systemctl restart auto-cpufreq
+   ```
+
+### Finding Device Names for Bluetooth Devices
+
+Bluetooth devices often have complex names:
+
+```bash
+# List all power supplies
+ls -la /sys/class/power_supply/
+
+# Check device info
+for device in /sys/class/power_supply/*; do
+  echo "Device: $(basename $device)"
+  cat $device/type 2>/dev/null || echo "Type: unknown"
+  echo "---"
+done
+```
+
+### Multiple Devices with Similar Names
+
+If you have multiple controllers or devices, connect them one at a time and check the power supply list after each connection to identify which name corresponds to which device.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Document Your Devices">
+    Use descriptive labels on the left side of each entry so you remember what device you're ignoring:
+    ```ini
+    # Good
+    ps5_dualsense = hid-aa:bb:cc:dd:ee:ff-battery
+    
+    # Less helpful
+    device1 = hid-aa:bb:cc:dd:ee:ff-battery
+    ```
+  </Accordion>
+  
+  <Accordion title="Ignore Only Peripherals">
+    Never ignore your laptop's main battery (usually named `BAT0`, `BAT1`, etc.). Only ignore connected peripherals.
+  </Accordion>
+  
+  <Accordion title="Test After Changes">
+    After updating your ignore list, test that auto-cpufreq correctly detects your power state:
+    ```bash
+    # Disconnect charger and check stats
+    auto-cpufreq --stats
+    
+    # Connect charger and check again
+    auto-cpufreq --stats
+    ```
+  </Accordion>
+  
+  <Accordion title="Keep List Updated">
+    When you get new peripherals, remember to add them to your ignore list if they appear as power supplies.
+  </Accordion>
+</AccordionGroup>
+
+## Related Configuration
+
+- [Configuration File Overview](/configuration/config-file) - Complete configuration file reference
+- [Battery Settings](/configuration/battery-thresholds) - Configure battery-specific behavior
+- [Charger Settings](/configuration/config-file) - Configure charger-specific behavior

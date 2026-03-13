@@ -1,0 +1,563 @@
+---
+title: Turbo Boost
+description: Understanding CPU turbo boost and how auto-cpufreq manages it for optimal performance and battery life
+---
+
+## What is Turbo Boost?
+
+Turbo Boost (Intel) and Turbo Core (AMD) are processor features that allow CPU cores to run at frequencies higher than their base clock speed when thermal and power conditions allow. This provides performance bursts for demanding workloads.
+
+<Info>
+  Turbo frequencies can be 30-50% higher than base frequency, significantly improving single-threaded performance.
+</Info>
+
+### How Turbo Works
+
+<Steps>
+  <Step title="Workload Detected">
+    CPU detects high demand on one or more cores
+  </Step>
+  
+  <Step title="Check Conditions">
+    Verifies thermal and power limits aren't exceeded
+  </Step>
+  
+  <Step title="Frequency Boost">
+    Increases core frequency above base clock
+  </Step>
+  
+  <Step title="Monitor & Adjust">
+    Continuously monitors temperature and power draw
+  </Step>
+</Steps>
+
+## Turbo Boost Tradeoffs
+
+Enabling turbo boost comes with clear tradeoffs:
+
+<CardGroup cols={2}>
+  <Card title="Benefits" icon="thumbs-up">
+    - Significantly better performance
+    - Faster completion of bursty tasks
+    - Better single-threaded responsiveness
+    - Improved interactive experience
+  </Card>
+  
+  <Card title="Costs" icon="thumbs-down">
+    - Higher power consumption (30-50% more)
+    - Reduced battery life on laptops
+    - Increased heat generation
+    - Higher fan noise
+  </Card>
+</CardGroup>
+
+## How auto-cpufreq Manages Turbo
+
+auto-cpufreq intelligently manages turbo boost based on power state, CPU load, and temperature.
+
+### Auto Mode (Default)
+
+By default, auto-cpufreq uses **intelligent auto mode** that dynamically enables/disables turbo:
+
+<CodeGroup>
+```python Turbo Decision Logic
+# Enable turbo if:
+- CPU load ≥ 20%
+- OR any single core at high usage (≥75%)
+- AND temperature within acceptable limits
+
+# Disable turbo if:
+- CPU load < 20%
+- AND temperature is optimal
+```
+</CodeGroup>
+
+This balances performance and efficiency automatically.
+
+### Turbo Control Implementation
+
+Turbo boost is controlled via sysfs entries (`core.py:199-243`):
+
+<CodeGroup>
+```python core.py:199-238
+def turbo(value: bool = None):
+    """
+    Get and set turbo mode
+    """
+    p_state = Path("/sys/devices/system/cpu/intel_pstate/no_turbo")
+    cpufreq = Path("/sys/devices/system/cpu/cpufreq/boost")
+    amd_pstate = Path("/sys/devices/system/cpu/amd_pstate/status")
+
+    if p_state.exists():
+        inverse = True  # Intel: 0 = turbo on, 1 = turbo off
+        f = p_state
+    elif cpufreq.exists():
+        f = cpufreq  # Generic: 1 = turbo on, 0 = turbo off
+        inverse = False
+    elif amd_pstate.exists():
+        amd_value = amd_pstate.read_text().strip()
+        if amd_value == "active":
+            print("CPU turbo is controlled by amd-pstate-epp driver")
+        return False
+    else:
+        print("Warning: CPU turbo is not available")
+        return False
+    
+    turbo_override = get_turbo_override()
+    if turbo_override != "auto":
+        # Set the value in respect to if turbo override is enabled or not.
+        if turbo_override == "always":
+            value = True
+        elif turbo_override == "never":
+            value = False
+```
+</CodeGroup>
+
+<Note>
+  Intel systems use inverted logic (0 = turbo on, 1 = turbo off) while generic cpufreq uses normal logic (1 = on, 0 = off).
+</Note>
+
+## Turbo Boost on AC Power
+
+When connected to AC power, turbo boost is managed aggressively for performance (`core.py:700-738`):
+
+### High CPU Load (≥20% or core at 75%+)
+
+<CodeGroup>
+```python
+if (psutil.cpu_percent(percpu=False, interval=0.01) >= 20.0
+    or max(psutil.cpu_percent(percpu=True, interval=0.01)) >= 75):
+    
+    if cpuload >= 20: 
+        set_turbo(True)  # Enable turbo
+    elif avg_temp >= 70:
+        set_turbo(False)  # Disable if too hot
+    else:
+        set_turbo(True)
+```
+</CodeGroup>
+
+**Result**: Turbo enabled unless temperature exceeds **70°C**
+
+### Medium System Load
+
+<CodeGroup>
+```python
+elif load1m >= performance_load_threshold:
+    if cpuload >= 20:
+        set_turbo(True)
+    elif avg_temp >= 65:
+        set_turbo(False)  # More conservative threshold
+    else:
+        set_turbo(True)
+```
+</CodeGroup>
+
+**Result**: Turbo enabled unless temperature exceeds **65°C**
+
+### Optimal Load
+
+<CodeGroup>
+```python
+else:  # Load optimal
+    if cpuload >= 20:
+        set_turbo(True)
+    else:
+        # Even at low load, consider temperature
+        if avg_temp >= 60:
+            set_turbo(False)
+        else:
+            set_turbo(False)
+```
+</CodeGroup>
+
+**Result**: Turbo disabled to reduce heat and power consumption
+
+<Tip>
+  On AC power, auto-cpufreq prioritizes performance while preventing thermal throttling.
+</Tip>
+
+## Turbo Boost on Battery
+
+When on battery power, turbo management is much more conservative (`core.py:587-612`):
+
+<CodeGroup>
+```python core.py:599-611
+if psutil.cpu_percent(percpu=False, interval=0.01) >= 30.0 or isclose(
+    max(psutil.cpu_percent(percpu=True, interval=0.01)), 100
+): 
+    print("High CPU load", end="")
+elif load1m > powersave_load_threshold: 
+    print("High system load", end="")
+else: 
+    print("Load optimal", end="")
+
+if cpuload >= 20: 
+    set_turbo(True)   # high cpu usage trigger
+else: 
+    set_turbo(False)  # Disable to save battery
+```
+</CodeGroup>
+
+### Battery Turbo Logic
+
+- **Enable turbo ONLY if**: CPU load ≥ 20%
+- **Otherwise**: Disable turbo to maximize battery life
+- **Temperature**: Always considered, can override enable decision
+
+<Warning>
+  On battery, turbo is disabled most of the time to extend battery life. This may slightly impact performance.
+</Warning>
+
+## Turbo Override Modes
+
+You can override auto-cpufreq's intelligent turbo management:
+
+<CardGroup cols={3}>
+  <Card title="Auto" icon="brain">
+    **Default intelligent mode**
+    
+    Dynamically enables/disables based on load and temperature
+  </Card>
+  
+  <Card title="Always" icon="toggle-on">
+    **Force turbo always on**
+    
+    Maximum performance at cost of battery and heat
+  </Card>
+  
+  <Card title="Never" icon="toggle-off">
+    **Force turbo always off**
+    
+    Maximum battery life and lowest temperatures
+  </Card>
+</CardGroup>
+
+### Setting Turbo Override
+
+<Tabs>
+  <Tab title="Command Line">
+    <CodeGroup>
+    ```bash Always Enable
+    sudo auto-cpufreq --turbo=always
+    ```
+    
+    ```bash Always Disable
+    sudo auto-cpufreq --turbo=never
+    ```
+    
+    ```bash Reset to Auto
+    sudo auto-cpufreq --turbo=auto
+    ```
+    </CodeGroup>
+    
+    <Warning>
+      Turbo overrides persist across reboots until explicitly reset.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Config File">
+    Set turbo mode in `/etc/auto-cpufreq.conf`:
+    
+    <CodeGroup>
+    ```ini /etc/auto-cpufreq.conf
+    [charger]
+    governor = performance
+    turbo = auto  # Options: auto, always, never
+    
+    [battery]
+    governor = powersave
+    turbo = auto
+    ```
+    </CodeGroup>
+    
+    <Info>
+      Config file settings can be overridden by command-line flags.
+    </Info>
+  </Tab>
+</Tabs>
+
+### Override Storage
+
+Turbo overrides are persisted as Python pickle files:
+
+- **Location**: `/opt/auto-cpufreq/turbo-override.pickle`
+- **Snap Location**: `/var/snap/auto-cpufreq/current/turbo-override.pickle`
+
+Implementation at `core.py:81-95`:
+
+<CodeGroup>
+```python core.py:81-95
+def get_turbo_override():
+    if os.path.isfile(turbo_override_state):
+        with open(turbo_override_state, "rb") as store: 
+            return load(store)
+    else: 
+        return "auto"
+
+def set_turbo_override(override):
+    if override in ["never", "always"]:
+        with open(turbo_override_state, "wb") as store:
+            dump(override, store)
+        print(f"Set turbo boost override to {override}")
+    elif override == "auto":
+        if os.path.isfile(turbo_override_state):
+            os.remove(turbo_override_state)
+        print("Turbo override removed")
+```
+</CodeGroup>
+
+## Temperature-Based Turbo Control
+
+Temperature is a critical factor in turbo decisions. Here's the complete temperature threshold table:
+
+### AC Power Temperature Thresholds
+
+| System State | Temp Threshold | Turbo Decision |
+|--------------|----------------|----------------|
+| High CPU load (≥20% or core at 75%+) | < 70°C | ✅ Enable turbo |
+| High CPU load | ≥ 70°C | ❌ Disable turbo |
+| High system load | < 65°C | ✅ Enable turbo |
+| High system load | ≥ 65°C | ❌ Disable turbo |
+| Optimal load | < 60°C | ❌ Disable (unnecessary) |
+| Optimal load | ≥ 60°C | ❌ Disable (too hot) |
+
+See implementation at `core.py:713-737`
+
+### Battery Temperature Thresholds
+
+On battery, temperature is less of a concern since turbo is mostly disabled:
+
+- Turbo only enabled if CPU load ≥ 20%
+- Temperature check still applies but less frequently triggered
+- Priority is battery life over temperature optimization
+
+See implementation at `core.py:599-611`
+
+<Info>
+  Temperature readings come from thermal sensors prioritized as: coretemp → CPU-labeled sensors → acpitz → k10temp → zenpower
+</Info>
+
+## Monitoring Turbo State
+
+Check current turbo boost status:
+
+<Tabs>
+  <Tab title="auto-cpufreq">
+    <CodeGroup>
+    ```bash Live Stats
+    auto-cpufreq --stats
+    ```
+    
+    ```bash Monitor Mode
+    sudo auto-cpufreq --monitor
+    ```
+    </CodeGroup>
+    
+    Look for lines like:
+    ```
+    Setting turbo boost: on
+    Currently turbo boost is: on
+    ```
+  </Tab>
+  
+  <Tab title="Direct Check">
+    <CodeGroup>
+    ```bash Intel (intel_pstate)
+    cat /sys/devices/system/cpu/intel_pstate/no_turbo
+    # 0 = turbo enabled
+    # 1 = turbo disabled
+    ```
+    
+    ```bash Generic/AMD (cpufreq)
+    cat /sys/devices/system/cpu/cpufreq/boost
+    # 1 = turbo enabled
+    # 0 = turbo disabled
+    ```
+    
+    ```bash AMD (amd-pstate)
+    cat /sys/devices/system/cpu/amd_pstate/status
+    # active = EPP controls turbo
+    ```
+    </CodeGroup>
+  </Tab>
+  
+  <Tab title="Verify Frequencies">
+    Check if CPU is actually boosting:
+    
+    <CodeGroup>
+    ```bash Current Frequencies
+    watch -n 1 'grep MHz /proc/cpuinfo'
+    ```
+    
+    ```bash Or use lscpu
+    watch -n 1 'lscpu | grep MHz'
+    ```
+    </CodeGroup>
+    
+    Frequencies above base clock indicate turbo is active.
+  </Tab>
+</Tabs>
+
+## Platform-Specific Behavior
+
+### Intel Systems
+
+<CardGroup cols={2}>
+  <Card title="intel_pstate Driver" icon="microchip">
+    - Turbo via `/sys/devices/system/cpu/intel_pstate/no_turbo`
+    - Inverted logic (0 = on, 1 = off)
+    - Hardware P-States (HWP) may override
+  </Card>
+  
+  <Card title="acpi-cpufreq Driver" icon="gear">
+    - Turbo via `/sys/devices/system/cpu/cpufreq/boost`
+    - Normal logic (1 = on, 0 = off)
+    - Software-managed boost
+  </Card>
+</CardGroup>
+
+### AMD Systems
+
+<CardGroup cols={2}>
+  <Card title="amd-pstate Driver" icon="microchip">
+    - Active mode: EPP controls boost
+    - Guided/Passive: cpufreq boost
+    - Check `/sys/devices/system/cpu/amd_pstate/status`
+  </Card>
+  
+  <Card title="acpi-cpufreq Driver" icon="gear">
+    - Turbo via `/sys/devices/system/cpu/cpufreq/boost`
+    - Normal logic (1 = on, 0 = off)
+    - Works like Intel cpufreq
+  </Card>
+</CardGroup>
+
+<Note>
+  auto-cpufreq automatically detects your platform and uses the correct control interface.
+</Note>
+
+## Use Cases and Recommendations
+
+### Maximum Performance (AC Power)
+
+<CodeGroup>
+```bash
+sudo auto-cpufreq --turbo=always --force=performance
+```
+</CodeGroup>
+
+**Use for**: Compiling, rendering, gaming, benchmarks
+
+**Tradeoffs**: Higher power consumption, more heat, fan noise
+
+### Maximum Battery Life
+
+<CodeGroup>
+```bash
+sudo auto-cpufreq --turbo=never --force=powersave
+```
+</CodeGroup>
+
+**Use for**: Basic browsing, document editing, reading
+
+**Tradeoffs**: Reduced performance, slower app launches
+
+### Balanced (Recommended)
+
+<CodeGroup>
+```bash
+sudo auto-cpufreq --turbo=auto --force=reset
+```
+</CodeGroup>
+
+**Use for**: General daily use, mixed workloads
+
+**Tradeoffs**: None - intelligent automatic management
+
+<Tip>
+  For most users, leaving turbo in **auto mode** provides the best balance of performance and efficiency.
+</Tip>
+
+## Troubleshooting
+
+### Turbo Not Available
+
+If you see "Warning: CPU turbo is not available":
+
+1. **Check if your CPU supports turbo**:
+   ```bash
+   lscpu | grep -i boost
+   ```
+
+2. **Verify sysfs entries exist**:
+   ```bash
+   ls /sys/devices/system/cpu/intel_pstate/no_turbo
+   ls /sys/devices/system/cpu/cpufreq/boost
+   ```
+
+3. **Check BIOS settings**: Turbo may be disabled in BIOS/UEFI
+
+### Turbo Always Disabled
+
+If turbo never enables:
+
+- Check for override: `cat /opt/auto-cpufreq/turbo-override.pickle`
+- Verify temperatures aren't too high
+- Check power limits in BIOS
+- Review auto-cpufreq stats for decision reasoning
+
+### Turbo Always Enabled (Battery Drain)
+
+If turbo won't disable:
+
+- Check for `turbo=always` override
+- Verify auto-cpufreq daemon is running
+- Check for conflicting power management tools
+- Review CPU load - high load keeps turbo enabled
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Trust Auto Mode" icon="brain">
+    The default auto mode is carefully tuned for most workloads
+  </Card>
+  
+  <Card title="Use Config File" icon="file-code">
+    Set different turbo behavior for battery vs AC in config
+  </Card>
+  
+  <Card title="Monitor Temps" icon="temperature-high">
+    Watch temperatures if forcing turbo always on
+  </Card>
+  
+  <Card title="Reset After Testing" icon="rotate-left">
+    Remember to reset overrides after benchmarking/testing
+  </Card>
+</CardGroup>
+
+## Impact on Battery Life
+
+Real-world battery life impact of turbo boost:
+
+| Scenario | Turbo On | Turbo Off | Difference |
+|----------|----------|-----------|------------|
+| Light browsing | ~7 hours | ~9 hours | +28% |
+| Video playback | ~6 hours | ~7.5 hours | +25% |
+| Mixed workload | ~5 hours | ~6.5 hours | +30% |
+| Heavy compile | ~3 hours | ~4 hours | +33% |
+
+<Info>
+  These are example values. Actual impact varies by CPU, workload, and system configuration.
+</Info>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="How It Works" icon="gears" href="/concepts/how-it-works">
+    Learn about the core algorithm and decision-making
+  </Card>
+  <Card title="Governors" icon="sliders" href="/concepts/governors">
+    Understand CPU governor selection
+  </Card>
+</CardGroup>

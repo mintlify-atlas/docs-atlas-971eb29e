@@ -1,0 +1,356 @@
+---
+title: "--config"
+description: "Use a custom configuration file"
+icon: "file-lines"
+---
+
+# Config Command
+
+The `--config` option allows you to specify a custom configuration file path, overriding the default configuration file locations.
+
+## Usage
+
+```bash
+sudo auto-cpufreq --config /path/to/config.conf --monitor
+sudo auto-cpufreq --config /path/to/config.conf --live
+sudo auto-cpufreq --config /path/to/config.conf --daemon
+```
+
+<Note>
+The `--config` option must be combined with another command like `--monitor`, `--live`, or when starting the daemon.
+</Note>
+
+## Default Config File Locations
+
+Without `--config`, auto-cpufreq searches for configuration in this order:
+
+1. **User config**: `$XDG_CONFIG_HOME/auto-cpufreq/auto-cpufreq.conf`  
+   (Usually `~/.config/auto-cpufreq/auto-cpufreq.conf`)
+2. **System config**: `/etc/auto-cpufreq.conf`
+3. **No config**: Uses automatic defaults
+
+<Info>
+The first config file found is used. User config takes priority over system config.
+</Info>
+
+## Using Custom Config
+
+### For Testing (Monitor Mode)
+
+```bash
+sudo auto-cpufreq --config ~/my-test-config.conf --monitor
+```
+
+This shows what optimizations would be applied with your custom config, without making changes.
+
+### For Testing (Live Mode)
+
+```bash
+sudo auto-cpufreq --config ~/my-test-config.conf --live
+```
+
+Applies your custom config temporarily for testing.
+
+### For Daemon (Not Recommended)
+
+You can specify a custom config when starting the daemon manually:
+
+```bash
+sudo auto-cpufreq --config /path/to/config.conf --daemon
+```
+
+<Warning>
+For permanent daemon use, place your config at `/etc/auto-cpufreq.conf` instead of using `--config`. The systemd service doesn't support the `--config` flag.
+</Warning>
+
+## Config File Format
+
+Configuration files use INI format with `[charger]` and `[battery]` sections:
+
+```ini
+# settings for when connected to AC power
+[charger]
+governor = performance
+turbo = auto
+scaling_min_freq = 1400000
+scaling_max_freq = 3500000
+
+# settings for when using battery
+[battery]
+governor = powersave  
+turbo = auto
+scaling_min_freq = 1400000
+scaling_max_freq = 1800000
+
+# battery charging thresholds
+enable_thresholds = true
+start_threshold = 20
+stop_threshold = 80
+```
+
+For complete configuration options, see the [Configuration File documentation](/configuration/config-file).
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Testing Configurations" icon="flask">
+    Test different configs before committing to system-wide settings
+  </Card>
+  <Card title="Multiple Profiles" icon="layer-group">
+    Switch between different profiles for different scenarios
+  </Card>
+  <Card title="Development" icon="code">
+    Develop and test auto-cpufreq configurations
+  </Card>
+  <Card title="Troubleshooting" icon="wrench">
+    Isolate config issues by testing with minimal configs
+  </Card>
+</CardGroup>
+
+## Example Configurations
+
+### Maximum Performance Config
+
+```ini performance.conf
+[charger]
+governor = performance
+energy_performance_preference = performance
+turbo = always
+
+[battery]
+governor = performance
+energy_performance_preference = performance  
+turbo = always
+```
+
+Test it:
+```bash
+sudo auto-cpufreq --config performance.conf --monitor
+```
+
+### Maximum Battery Life Config
+
+```ini battery-saver.conf
+[charger]
+governor = powersave
+energy_performance_preference = power
+turbo = auto
+scaling_max_freq = 2000000
+
+[battery]
+governor = powersave
+energy_performance_preference = power
+turbo = never
+scaling_max_freq = 1500000
+enable_thresholds = true
+start_threshold = 20
+stop_threshold = 80
+```
+
+Test it:
+```bash
+sudo auto-cpufreq --config battery-saver.conf --live
+```
+
+### Quiet/Cool Config
+
+```ini quiet.conf
+[charger]
+governor = powersave
+turbo = never
+scaling_max_freq = 2000000
+platform_profile = quiet
+
+[battery]  
+governor = powersave
+turbo = never
+scaling_max_freq = 1500000
+platform_profile = low-power
+```
+
+## Testing Workflow
+
+<Steps>
+  <Step title="Create test config">
+    ```bash
+    nano ~/test-config.conf
+    ```
+    
+    Add your configuration settings.
+  </Step>
+  
+  <Step title="Test with monitor">
+    ```bash
+    sudo auto-cpufreq --config ~/test-config.conf --monitor
+    ```
+    
+    Verify the suggestions match your expectations.
+  </Step>
+  
+  <Step title="Test with live mode">
+    ```bash
+    sudo auto-cpufreq --config ~/test-config.conf --live
+    ```
+    
+    Run for a few minutes and check:
+    - CPU frequencies
+    - Temperatures
+    - Battery drain rate
+  </Step>
+  
+  <Step title="Deploy to system">
+    If satisfied with results:
+    ```bash
+    sudo cp ~/test-config.conf /etc/auto-cpufreq.conf
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Step>
+</Steps>
+
+## Configuration Validation
+
+Verify your config is being used:
+
+```bash
+sudo auto-cpufreq --config ~/my-config.conf --monitor
+
+# Output will show:
+# Using settings defined in /home/user/my-config.conf file
+```
+
+If you see this message, your custom config is loaded correctly.
+
+## Priority Order
+
+When multiple configuration sources exist:
+
+1. **`--force` override** (highest priority)
+2. **`--turbo` override**  
+3. **`--config` file** (command-line specified)
+4. **User config** (`~/.config/auto-cpufreq/auto-cpufreq.conf`)
+5. **System config** (`/etc/auto-cpufreq.conf`)
+6. **Automatic defaults** (lowest priority)
+
+## Permanent vs Temporary
+
+| Method | Persistence | Use Case |
+|--------|-------------|----------|
+| `--config` with `--monitor` | None (preview only) | Testing |
+| `--config` with `--live` | Until exit | Temporary testing |
+| `/etc/auto-cpufreq.conf` | Permanent | Production use |
+| `~/.config/auto-cpufreq/auto-cpufreq.conf` | Permanent (user) | Personal settings |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Config file not found">
+    Verify the path is correct:
+    ```bash
+    ls -l /path/to/config.conf
+    ```
+    
+    Use absolute paths, not relative:
+    ```bash
+    # Good
+    sudo auto-cpufreq --config /home/user/config.conf --monitor
+    
+    # May fail
+    sudo auto-cpufreq --config ~/config.conf --monitor
+    ```
+  </Accordion>
+  
+  <Accordion title="Settings not being applied">
+    Check config file syntax:
+    ```bash
+    cat /path/to/config.conf
+    ```
+    
+    Common issues:
+    - Missing `[charger]` or `[battery]` sections
+    - Typos in option names
+    - Invalid values
+    
+    Enable debug mode:
+    ```bash
+    sudo auto-cpufreq --config /path/to/config.conf --debug
+    ```
+  </Accordion>
+  
+  <Accordion title="Daemon ignoring custom config">
+    The systemd service doesn't support `--config`. To use a custom config with the daemon:
+    
+    1. Copy config to standard location:
+    ```bash
+    sudo cp /path/to/config.conf /etc/auto-cpufreq.conf
+    ```
+    
+    2. Restart daemon:
+    ```bash
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied">
+    Ensure the config file is readable:
+    ```bash
+    sudo chmod 644 /path/to/config.conf
+    ```
+    
+    Run auto-cpufreq with sudo:
+    ```bash
+    sudo auto-cpufreq --config /path/to/config.conf --monitor
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Example: Multiple Profiles
+
+Create different profiles for different scenarios:
+
+```bash
+# Performance profile
+sudo auto-cpufreq --config ~/configs/performance.conf --live
+
+# Battery saver profile
+sudo auto-cpufreq --config ~/configs/battery.conf --live
+
+# Quiet profile  
+sudo auto-cpufreq --config ~/configs/quiet.conf --live
+
+# Switch active profile
+sudo cp ~/configs/performance.conf /etc/auto-cpufreq.conf
+sudo systemctl restart auto-cpufreq
+```
+
+## Config File Templates
+
+Use the example config as a starting point:
+
+```bash
+# View example config
+cat /path/to/auto-cpufreq/auto-cpufreq.conf-example
+
+# Copy to test location
+cp /path/to/auto-cpufreq/auto-cpufreq.conf-example ~/my-config.conf
+
+# Edit and test
+nano ~/my-config.conf
+sudo auto-cpufreq --config ~/my-config.conf --monitor
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Config File Guide" icon="book" href="/configuration/config-file">
+    Complete configuration file reference
+  </Card>
+  <Card title="Monitor Mode" icon="eye" href="/commands/monitor">
+    Test configs without changes
+  </Card>
+  <Card title="Live Mode" icon="circle-play" href="/commands/live">
+    Apply configs temporarily
+  </Card>
+  <Card title="Governor Override" icon="gauge-high" href="/configuration/governor-override">
+    Override config with force flags
+  </Card>
+</CardGroup>

@@ -1,0 +1,221 @@
+---
+title: Snap Package
+description: Install auto-cpufreq from the Snap Store
+---
+
+auto-cpufreq is available on the Snap Store, providing an easy installation method for distributions that support Snap packages.
+
+<Warning>
+  While all auto-cpufreq CLI functionality will work as intended, **the GUI is not available on Snap package installs** due to Snap package confinement limitations. For GUI support, please use the [auto-cpufreq-installer](/installation/auto-installer).
+</Warning>
+
+## Prerequisites
+
+Before installation, ensure:
+
+- **snapd** is installed on your system
+- **snap version** is >= 2.44 (required for full functionality)
+
+### Installing snapd
+
+If snapd is not already installed:
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install snapd
+```
+
+```bash Fedora
+sudo dnf install snapd
+sudo ln -s /var/lib/snapd/snap /snap
+```
+
+```bash Arch
+sudo pacman -S snapd
+sudo systemctl enable --now snapd.socket
+sudo ln -s /var/lib/snapd/snap /snap
+```
+
+```bash openSUSE
+sudo zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Leap_15.2 snappy
+sudo zypper --gpg-auto-import-keys refresh
+sudo zypper dup --from snappy
+sudo zypper install snapd
+sudo systemctl enable --now snapd
+```
+</CodeGroup>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Verify snap version">
+    Check that your snap version meets the minimum requirement:
+    ```bash
+    snap version
+    ```
+    Ensure the version is >= 2.44.
+  </Step>
+
+  <Step title="Install auto-cpufreq from Snap Store">
+    Install the package using the snap command:
+    ```bash
+    sudo snap install auto-cpufreq
+    ```
+  </Step>
+
+  <Step title="Verify installation">
+    Confirm auto-cpufreq is installed:
+    ```bash
+    snap list auto-cpufreq
+    ```
+  </Step>
+</Steps>
+
+## Post-Installation Configuration
+
+### Disable conflicting services
+
+Unlike the auto-cpufreq-installer, the Snap package runs in a confined environment and cannot automatically disable conflicting services. You must manually disable them.
+
+<Accordion title="Disable GNOME Power Profiles Daemon">
+  The GNOME Power Profiles daemon conflicts with auto-cpufreq and must be disabled manually.
+
+  **Step 1**: Clone the auto-cpufreq repository to access the power_helper script:
+  ```bash
+  git clone https://github.com/AdnanHodzic/auto-cpufreq
+  cd auto-cpufreq
+  ```
+
+  **Step 2**: Install required Python libraries:
+  ```bash
+  # Debian/Ubuntu
+  sudo apt install python3-psutil python3-pyinotify
+
+  # Or using pip
+  sudo pip3 install psutil pyinotify --break-system-packages
+  ```
+
+  **Step 3**: Disable GNOME Power Profiles:
+  ```bash
+  sudo python3 -m auto_cpufreq.power_helper --gnome_power_disable
+  ```
+
+  **Step 4**: Verify the service is masked:
+  ```bash
+  systemctl status power-profiles-daemon.service
+  ```
+</Accordion>
+
+<Accordion title="Disable TuneD (Fedora 41+)">
+  If you're running Fedora 41 or later, disable the TuneD daemon:
+  ```bash
+  sudo systemctl stop tuned
+  sudo systemctl disable tuned
+  sudo systemctl mask tuned
+  ```
+</Accordion>
+
+## Running auto-cpufreq (Snap)
+
+After installation, run auto-cpufreq commands using the `snap run` prefix or the regular command:
+
+```bash
+# Using snap run (recommended for Fedora with cgroups v2)
+sudo snap run auto-cpufreq --monitor
+
+# Or use the regular command
+sudo auto-cpufreq --monitor
+```
+
+<Note>
+  **Fedora users**: Due to cgroups v2 development, you may need to use `sudo snap run auto-cpufreq` instead of `sudo auto-cpufreq` for commands to work properly.
+</Note>
+
+## Installing the Daemon
+
+To enable auto-cpufreq to run permanently:
+
+```bash
+sudo auto-cpufreq --install
+```
+
+Check daemon status:
+
+```bash
+systemctl status snap.auto-cpufreq.service.service
+```
+
+## Snap Package Limitations
+
+<CardGroup cols={2}>
+  <Card title="No GUI Support" icon="window-maximize">
+    The GUI (auto-cpufreq-gtk) is not available due to Snap confinement restrictions.
+  </Card>
+  <Card title="Manual Service Management" icon="wrench">
+    Conflicting services must be manually disabled (not automatic like the installer).
+  </Card>
+  <Card title="Fedora cgroups v2" icon="fedora">
+    May require using `snap run` prefix for commands.
+  </Card>
+  <Card title="Confined Environment" icon="lock">
+    Limited access to system resources compared to native installation.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Command fails with "permission denied" or cgroups error (Fedora)
+
+Use the `snap run` prefix:
+
+```bash
+sudo snap run auto-cpufreq --monitor
+```
+
+### Daemon service not starting
+
+Check if conflicting services are still running:
+
+```bash
+systemctl status power-profiles-daemon.service
+systemctl status tuned.service
+```
+
+If they're active, mask them:
+
+```bash
+sudo systemctl mask power-profiles-daemon.service
+sudo systemctl mask tuned.service
+```
+
+### Updating the Snap package
+
+Snap packages update automatically, but you can manually trigger an update:
+
+```bash
+sudo snap refresh auto-cpufreq
+```
+
+### Uninstalling
+
+To remove the auto-cpufreq snap:
+
+```bash
+# First remove the daemon
+sudo auto-cpufreq --remove
+
+# Then remove the snap package
+sudo snap remove auto-cpufreq
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure auto-cpufreq" icon="gear" href="/configuration">
+    Customize settings with a config file
+  </Card>
+  <Card title="Monitor performance" icon="chart-line" href="/commands/monitor">
+    View CPU optimization statistics
+  </Card>
+</CardGroup>

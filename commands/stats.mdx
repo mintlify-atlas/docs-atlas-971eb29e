@@ -1,0 +1,304 @@
+---
+title: "--stats"
+description: "View live statistics from the auto-cpufreq daemon"
+icon: "chart-line"
+---
+
+# Stats Command
+
+The `--stats` command displays live statistics and monitoring data from the auto-cpufreq daemon, showing current CPU state and optimizations being applied.
+
+## Usage
+
+```bash
+auto-cpufreq --stats
+```
+
+<Note>
+The daemon must be installed and running to view statistics. This command does NOT require `sudo`.
+</Note>
+
+## What It Shows
+
+The stats command displays:
+
+- **System information** - OS, kernel, CPU model, core count
+- **Current CPU state** - Frequency, usage, temperature per core
+- **Battery information** - Charging state, percentage, power consumption
+- **Active governor** - Current CPU governor for each core
+- **Turbo boost status** - Whether turbo is enabled or disabled
+- **Frequency scaling** - Current min/max frequencies
+- **Applied optimizations** - What auto-cpufreq is doing
+- **Update rate** - Statistics refresh every 2 seconds
+
+## Example Output
+
+```bash
+$ auto-cpufreq --stats
+
+------------------------------ auto-cpufreq -------------------------------
+
+Automatic CPU speed & power optimizer for Linux
+
+------------------------------ System Info --------------------------------
+
+Linux distro: Ubuntu 22.04.3 LTS jammy
+Linux kernel: 6.2.0-39-generic
+Processor: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Cores: 8
+Architecture: x86_64
+Driver: intel_pstate
+
+------------------------------ Current Stats ------------------------------
+
+Governor: powersave
+Frequency: 800 MHz (avg)
+CPU usage: 12%
+CPU temperature: 48°C
+Available turbo boost governors: powersave performance
+
+------------------------------ CPU Frequency -------------------------------
+
+CPU0: 800 MHz
+CPU1: 800 MHz
+CPU2: 1200 MHz
+CPU3: 800 MHz
+CPU4: 800 MHz
+CPU5: 1100 MHz
+CPU6: 800 MHz
+CPU7: 800 MHz
+
+------------------------------ CPU Usage ----------------------------------
+
+CPU usage: 12%
+CPU0: 5%
+CPU1: 3%
+CPU2: 25%
+CPU3: 8%
+CPU4: 6%
+CPU5: 22%
+CPU6: 4%
+CPU7: 7%
+
+------------------------------ CPU Temperature ----------------------------
+
+Average CPU temperature: 48°C
+Core 0: 47°C
+Core 1: 48°C
+Core 2: 49°C
+Core 3: 48°C
+
+------------------------------ Battery ------------------------------------
+
+Charging: False
+Battery: 85%
+
+------------------------------ Governor -----------------------------------
+
+Governor: powersave (applied by auto-cpufreq)
+
+------------------------------ Scaling ------------------------------------
+
+Driver: intel_pstate
+Scaling min frequency: 400 MHz
+Scaling max frequency: 1800 MHz
+
+------------------------------ Turbo Boost --------------------------------
+
+Turbo boost: Disabled (applied by auto-cpufreq)
+```
+
+## Continuous Monitoring
+
+Stats mode runs continuously and updates every 2 seconds. To exit:
+
+- Press `Ctrl+C`
+
+<Info>
+The stats display refreshes automatically to show real-time system changes.
+</Info>
+
+## When to Use Stats
+
+<CardGroup cols={2}>
+  <Card title="Verify Operation" icon="check-circle">
+    Confirm the daemon is running and making optimizations
+  </Card>
+  <Card title="Monitor Performance" icon="gauge">
+    Watch CPU behavior under different workloads
+  </Card>
+  <Card title="Check Battery Impact" icon="battery-half">
+    See how optimizations affect battery percentage
+  </Card>
+  <Card title="Debug Issues" icon="bug">
+    Diagnose problems with CPU scaling or temperature
+  </Card>
+</CardGroup>
+
+## Understanding the Output
+
+### System Info Section
+
+Shows static information about your system:
+- Distribution and kernel version
+- CPU model and core count
+- System architecture
+- Active CPU driver (intel_pstate, acpi-cpufreq, etc.)
+
+### Current Stats Section
+
+Quick summary of current state:
+- Active governor
+- Average CPU frequency
+- Overall CPU usage percentage
+- Average CPU temperature
+
+### CPU Frequency Section
+
+Per-core frequency in MHz. Lower frequencies indicate power saving, higher frequencies indicate performance mode.
+
+### CPU Usage Section
+
+Per-core and average CPU utilization. High usage triggers frequency scaling and potentially turbo boost.
+
+### CPU Temperature Section
+
+Per-core and average temperatures in Celsius. auto-cpufreq uses this to manage turbo boost and prevent overheating.
+
+### Battery Section
+
+- **Charging**: Whether AC power is connected
+- **Battery**: Current battery percentage
+- Power consumption (if available)
+
+### Governor Section
+
+Shows which CPU governor is active:
+- `performance` - Maximum frequencies for best performance
+- `powersave` - Lower frequencies for battery life
+- `schedutil` - Scheduler-based frequency selection
+
+### Scaling Section
+
+Current frequency limits:
+- **Scaling min**: Minimum allowed CPU frequency
+- **Scaling max**: Maximum allowed CPU frequency
+
+These are adjusted based on battery state and configuration.
+
+### Turbo Boost Section
+
+Whether CPU turbo boost is currently:
+- **Enabled** - CPU can exceed base frequency
+- **Disabled** - CPU limited to base frequency
+
+## Using Stats with Configuration
+
+If you have a configuration file, stats will show the applied settings:
+
+```bash
+$ auto-cpufreq --stats
+
+Using settings defined in /etc/auto-cpufreq.conf file
+
+[... stats output ...]
+```
+
+## Stats vs Monitor Mode
+
+| Feature | Stats | Monitor |
+|---------|-------|--------|
+| Requires daemon | Yes | No |
+| Shows suggestions | No | Yes |
+| Shows applied changes | Yes | No |
+| Needs sudo | No | Yes |
+| Makes changes | No | No |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Daemon not running error">
+    The daemon must be installed and running:
+    ```bash
+    sudo auto-cpufreq --install
+    systemctl status auto-cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="No stats file found">
+    The stats file may be missing. Restart the daemon:
+    ```bash
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="Stats not updating">
+    Check if the daemon is frozen:
+    ```bash
+    sudo journalctl -u auto-cpufreq -f
+    ```
+    
+    Restart if needed:
+    ```bash
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Accordion>
+  
+  <Accordion title="Conflicting service warnings">
+    If you see warnings about TLP or GNOME Power Profiles:
+    ```bash
+    sudo systemctl mask power-profiles-daemon
+    sudo systemctl disable --now tlp
+    sudo systemctl restart auto-cpufreq
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Stats File Location
+
+Statistics are read from:
+
+- **Installer method**: `/var/run/auto-cpufreq.stats`
+- **Snap method**: `/var/snap/auto-cpufreq/current/auto-cpufreq.stats`
+- **AUR method**: `/var/run/auto-cpufreq.stats`
+
+You can view this file directly:
+
+```bash
+cat /var/run/auto-cpufreq.stats
+```
+
+## Logging Stats
+
+To log stats to a file for analysis:
+
+```bash
+auto-cpufreq --stats > ~/auto-cpufreq-log.txt
+```
+
+Or continuously with timestamps:
+
+```bash
+while true; do
+  echo "$(date)" >> ~/auto-cpufreq-log.txt
+  auto-cpufreq --stats >> ~/auto-cpufreq-log.txt 2>&1
+  sleep 60
+done
+```
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Monitor Mode" icon="eye" href="/commands/monitor">
+    View suggestions before installing daemon
+  </Card>
+  <Card title="Install Daemon" icon="download" href="/commands/install">
+    Install daemon to enable stats
+  </Card>
+  <Card title="Debug Mode" icon="bug" href="/commands/debug">
+    Get detailed debug information
+  </Card>
+  <Card title="Live Mode" icon="circle-play" href="/commands/live">
+    Test optimizations temporarily
+  </Card>
+</CardGroup>
