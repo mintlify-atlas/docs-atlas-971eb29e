@@ -1,0 +1,133 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "auto-cpufreq",
+  "projectDescription": "Automatic CPU speed & power optimizer for Linux",
+  "theme": "aspen",
+  "primaryColor": "#e09234",
+  "lightColor": "#988c8a",
+  "darkColor": "#d9d8d3",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/how-it-works",
+              "concepts/governors",
+              "concepts/turbo-boost"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/monitor-mode",
+              "usage/live-mode",
+              "usage/daemon-mode",
+              "usage/gui"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/config-file",
+              "configuration/governor-override",
+              "configuration/turbo-override",
+              "configuration/battery-thresholds",
+              "configuration/power-profiles"
+            ]
+          },
+          {
+            "group": "Installation Methods",
+            "pages": [
+              "installation/auto-installer",
+              "installation/snap",
+              "installation/aur",
+              "installation/nixos",
+              "installation/gentoo",
+              "installation/development"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/bluetooth-control",
+              "advanced/platform-profiles",
+              "advanced/frequency-scaling",
+              "advanced/ignored-power-supplies"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/common-issues",
+              "troubleshooting/driver-conflicts",
+              "troubleshooting/debug-mode"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Command Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/overview",
+              "commands/monitor",
+              "commands/live",
+              "commands/install",
+              "commands/remove",
+              "commands/stats",
+              "commands/update",
+              "commands/force",
+              "commands/turbo",
+              "commands/bluetooth",
+              "commands/config",
+              "commands/debug"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Automatic CPU frequency scaling based on battery state",
+    "CPU governor management (performance/powersave/balanced)",
+    "Turbo boost automatic control",
+    "Real-time system monitoring and statistics",
+    "Daemon mode for persistent optimizations",
+    "Battery charging threshold management",
+    "Configuration file support for custom profiles",
+    "GUI interface for easy management",
+    "Bluetooth boot control",
+    "Platform profile integration",
+    "Temperature-based CPU management",
+    "Power supply detection and management"
+  ],
+  "publicApiSurface": [
+    "auto-cpufreq --monitor",
+    "auto-cpufreq --live",
+    "auto-cpufreq --install",
+    "auto-cpufreq --remove",
+    "auto-cpufreq --stats",
+    "auto-cpufreq --update",
+    "auto-cpufreq --force=<mode>",
+    "auto-cpufreq --turbo=<mode>",
+    "auto-cpufreq --config=<path>",
+    "auto-cpufreq --bluetooth_boot_off",
+    "auto-cpufreq --bluetooth_boot_on",
+    "auto-cpufreq --debug",
+    "auto-cpufreq --version",
+    "auto-cpufreq-gtk"
+  ]
+}
